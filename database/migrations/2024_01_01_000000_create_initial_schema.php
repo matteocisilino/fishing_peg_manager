@@ -33,6 +33,8 @@ return new class extends Migration
      */
     public function up(): void
     {
+        Schema::disableForeignKeyConstraints();
+
         Schema::create('anglers', function (Blueprint $table) {
             $table->increments('id');
             $table->integer('team_id');
@@ -342,6 +344,7 @@ return new class extends Migration
             $table->foreign(['tournament_id'], null)->references(['id'])->on('tournaments')->onUpdate('no action')->onDelete('cascade');
         });
 
+        Schema::enableForeignKeyConstraints();
     }
 
     /**
@@ -349,6 +352,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::disableForeignKeyConstraints();
 
         Schema::dropIfExists('zones');
 
@@ -401,5 +405,7 @@ return new class extends Migration
         Schema::dropIfExists('cache');
 
         Schema::dropIfExists('anglers');
+
+        Schema::enableForeignKeyConstraints();
     }
 };
