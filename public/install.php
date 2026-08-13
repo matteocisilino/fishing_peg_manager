@@ -148,12 +148,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $envContent = file_get_contents(INSTALL_ROOT . '/.env.example');
             
-            $envContent = preg_replace('/APP_NAME=.*/', 'APP_NAME="' . $appName . '"', $envContent);
-            $envContent = preg_replace('/APP_ENV=.*/', 'APP_ENV=production', $envContent);
-            $envContent = preg_replace('/APP_DEBUG=.*/', 'APP_DEBUG=false', $envContent);
-            $envContent = preg_replace('/APP_URL=.*/', 'APP_URL=' . $appUrl, $envContent);
+            $envContent = preg_replace('/^#?\s*APP_NAME=.*/m', 'APP_NAME="' . $appName . '"', $envContent);
+            $envContent = preg_replace('/^#?\s*APP_ENV=.*/m', 'APP_ENV=production', $envContent);
+            $envContent = preg_replace('/^#?\s*APP_DEBUG=.*/m', 'APP_DEBUG=false', $envContent);
+            $envContent = preg_replace('/^#?\s*APP_URL=.*/m', 'APP_URL=' . $appUrl, $envContent);
             
-            $envContent = preg_replace('/DB_CONNECTION=.*/', 'DB_CONNECTION=' . $dbConnection, $envContent);
+            $envContent = preg_replace('/^#?\s*DB_CONNECTION=.*/m', 'DB_CONNECTION=' . $dbConnection, $envContent);
             
             if ($dbConnection === 'sqlite') {
                 $sqlitePath = INSTALL_ROOT . '/database/database.sqlite';
@@ -163,14 +163,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!file_exists($sqlitePath)) {
                     touch($sqlitePath);
                 }
-                $envContent = preg_replace('/# DB_DATABASE=.*/', 'DB_DATABASE=' . $sqlitePath, $envContent);
-                $envContent = preg_replace('/DB_DATABASE=.*/', 'DB_DATABASE=' . $sqlitePath, $envContent);
+                $envContent = preg_replace('/^#?\s*DB_DATABASE=.*/m', 'DB_DATABASE=' . $sqlitePath, $envContent);
             } else {
-                $envContent = preg_replace('/DB_HOST=.*/', 'DB_HOST=' . $dbHost, $envContent);
-                $envContent = preg_replace('/DB_PORT=.*/', 'DB_PORT=' . $dbPort, $envContent);
-                $envContent = preg_replace('/DB_DATABASE=.*/', 'DB_DATABASE=' . $dbDatabase, $envContent);
-                $envContent = preg_replace('/DB_USERNAME=.*/', 'DB_USERNAME=' . $dbUsername, $envContent);
-                $envContent = preg_replace('/DB_PASSWORD=.*/', 'DB_PASSWORD="' . $dbPassword . '"', $envContent);
+                $envContent = preg_replace('/^#?\s*DB_HOST=.*/m', 'DB_HOST=' . $dbHost, $envContent);
+                $envContent = preg_replace('/^#?\s*DB_PORT=.*/m', 'DB_PORT=' . $dbPort, $envContent);
+                $envContent = preg_replace('/^#?\s*DB_DATABASE=.*/m', 'DB_DATABASE=' . $dbDatabase, $envContent);
+                $envContent = preg_replace('/^#?\s*DB_USERNAME=.*/m', 'DB_USERNAME=' . $dbUsername, $envContent);
+                $envContent = preg_replace('/^#?\s*DB_PASSWORD=.*/m', 'DB_PASSWORD="' . $dbPassword . '"', $envContent);
             }
 
             file_put_contents(INSTALL_ROOT . '/.env', $envContent);
