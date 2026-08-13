@@ -162,7 +162,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // 1. Try running Composer programmatically using phar:// stream wrapper (works without exec)
                     try {
-                        putenv('COMPOSER_HOME=' . INSTALL_ROOT . '/.composer');
+                        if (function_exists('putenv')) {
+                            putenv('COMPOSER_HOME=' . INSTALL_ROOT . '/.composer');
+                        }
+                        $_ENV['COMPOSER_HOME'] = INSTALL_ROOT . '/.composer';
+                        $_SERVER['COMPOSER_HOME'] = INSTALL_ROOT . '/.composer';
                         
                         // Register phar autoloader / bootstrap
                         require_once 'phar://' . $composerPhar . '/src/bootstrap.php';
