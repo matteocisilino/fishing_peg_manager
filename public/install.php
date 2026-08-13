@@ -159,6 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($downloaded && file_exists($composerPhar)) {
                     $installed = false;
+                    $programmaticError = '';
                     
                     // 1. Try running Composer programmatically using phar:// stream wrapper (works without exec)
                     try {
@@ -186,9 +187,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         if ($result === 0) {
                             $installed = true;
+                        } else {
+                            $programmaticError = "Composer run returned status code " . $result;
                         }
-                    } catch (\Exception $e) {
-                        // Log programmatic error and try fallback if exec is available
+                    } catch (\Throwable $e) {
+                        $programmaticError = $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine();
                     }
                     
                     // 2. Fallback to exec if programmatic install failed/errored and exec is available
@@ -198,7 +201,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         if ($result === 0) {
                             $installed = true;
                         } else {
-                            $error = "Composer install failed: " . implode("\n", $output);
+                            $error = "Composer install via exec failed: " . implode("\n", $output);
                         }
                     }
                     
@@ -208,7 +211,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     if (!$installed && !$error) {
-                        $error = "Composer install failed: Programmatic installation failed and shell execution is disabled.";
+                        $error = "Composer install failed. Programmatic error: " . $programmaticError;
+                        if (!function_exists('exec')) {
+                            $error .= " (Shell execution 'exec' is also disabled)";
+                        }
                     }
                 } else {
                     $error = "Failed to download composer.phar for dependency installation.";
