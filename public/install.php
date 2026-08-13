@@ -170,6 +170,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $envContent = preg_replace('/^#?\s*DB_DATABASE=.*/m', 'DB_DATABASE=' . $dbDatabase, $envContent);
                 $envContent = preg_replace('/^#?\s*DB_USERNAME=.*/m', 'DB_USERNAME=' . $dbUsername, $envContent);
                 $envContent = preg_replace('/^#?\s*DB_PASSWORD=.*/m', 'DB_PASSWORD="' . $dbPassword . '"', $envContent);
+
+                // Try to create the database if it doesn't exist (MySQL/MariaDB)
+                try {
+                    $dsn = "mysql:host={$dbHost};port={$dbPort}";
+                    $pdo = new \PDO($dsn, $dbUsername, $dbPassword, [
+                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION
+                    ]);
+                    $pdo->exec("CREATE DATABASE IF NOT EXISTS `" . str_replace("`", "``", $dbDatabase) . "` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+                } catch (\Exception $e) {
+                    // Suppress error: if the database cannot be created due to permissions,
+                    // we let it fail during the migration step below which will print a clear error.
+                }
             }
 
             file_put_contents(INSTALL_ROOT . '/.env', $envContent);
