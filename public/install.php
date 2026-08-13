@@ -6,8 +6,40 @@
  * configures the database, and runs the necessary setup commands.
  */
 
-session_start();
-set_time_limit(300); // 5 minutes max execution time
+// Mock putenv for namespaces where it is called without a leading backslash
+// to prevent Fatal Errors on hosts where putenv() is disabled.
+namespace Composer\Util {
+    if (!function_exists('Composer\Util\putenv')) {
+        function putenv($var) {
+            $parts = explode('=', $var, 2);
+            if (count($parts) === 2) {
+                $_ENV[$parts[0]] = $parts[1];
+                $_SERVER[$parts[0]] = $parts[1];
+            }
+            return true;
+        }
+    }
+}
+
+namespace Composer {
+    if (!function_exists('Composer\putenv')) {
+        function putenv($var) {
+            return \Composer\Util\putenv($var);
+        }
+    }
+}
+
+namespace Symfony\Component\Console {
+    if (!function_exists('Symfony\Component\Console\putenv')) {
+        function putenv($var) {
+            return \Composer\Util\putenv($var);
+        }
+    }
+}
+
+namespace {
+    session_start();
+    set_time_limit(300); // 5 minutes max execution time
 
 // The installer is in the public directory, so the project root is one level up
 define('INSTALL_ROOT', dirname(__DIR__));
@@ -180,15 +212,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             '--no-dev' => true,
                             '--optimize-autoloader' => true,
                             '--no-interaction' => true,
+                            '--no-scripts' => true,
                         ]);
                         
+                        // Capture the Console output using StreamOutput
+                        $stream = fopen('php://temp', 'w+');
+                        $outputClass = 'Symfony\Component\Console\Output\StreamOutput';
+                        $output = new $outputClass($stream);
+                        
                         chdir(INSTALL_ROOT);
-                        $result = $application->run($input);
+                        $result = $application->run($input, $output);
+                        
+                        rewind($stream);
+                        $composerOutput = stream_get_contents($stream);
+                        fclose($stream);
                         
                         if ($result === 0) {
                             $installed = true;
                         } else {
-                            $programmaticError = "Composer run returned status code " . $result;
+                            $programmaticError = "Composer run returned status code " . $result . ".\nOutput:\n" . $composerOutput;
                         }
                     } catch (\Throwable $e) {
                         $programmaticError = $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine();
@@ -197,7 +239,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // 2. Fallback to exec if programmatic install failed/errored and exec is available
                     if (!$installed && function_exists('exec')) {
                         chdir(INSTALL_ROOT);
-                        exec("php composer.phar install --no-dev --optimize-autoloader 2>&1", $output, $result);
+                        exec("php composer.phar install --no-dev --optimize-autoloader --no-scripts 2>&1", $output, $result);
                         if ($result === 0) {
                             $installed = true;
                         } else {
@@ -211,9 +253,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     if (!$installed && !$error) {
-                        $error = "Composer install failed. Programmatic error: " . $programmaticError;
+                        $error = "Composer install failed. Programmatic error: " . nl2br(htmlspecialchars($programmaticError));
                         if (!function_exists('exec')) {
-                            $error .= " (Shell execution 'exec' is also disabled)";
+                            $error .= "<br><em>(Shell execution 'exec' is also disabled)</em>";
                         }
                     }
                 } else {
@@ -229,6 +271,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
                     
                     try {
+                        // Discover packages programmatically in memory (bypasses proc_open limitations)
+                        $kernel->call('package:discover');
+                        
                         $kernel->call('key:generate', ['--force' => true]);
                         $kernel->call('migrate', ['--force' => true]);
                         
@@ -349,3 +394,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </body>
 </html>
+<?php
+}
+?>
