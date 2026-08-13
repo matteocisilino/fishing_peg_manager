@@ -37,8 +37,8 @@ return new class extends Migration
 
         Schema::create('anglers', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('team_id');
-            $table->integer('zone_id')->nullable();
+            $table->unsignedInteger('team_id');
+            $table->unsignedInteger('zone_id')->nullable();
             $table->string('name');
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
@@ -61,13 +61,13 @@ return new class extends Migration
 
         Schema::create('draws', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('event_id');
-            $table->integer('angler_id');
+            $table->unsignedInteger('event_id');
+            $table->unsignedInteger('angler_id');
             $table->string('peg_number');
             $table->string('frozen_angler_name')->nullable();
             $table->string('frozen_team_name')->nullable();
             $table->string('frozen_zone_name')->nullable();
-            $table->integer('frozen_zone_id')->nullable();
+            $table->unsignedInteger('frozen_zone_id')->nullable();
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
             $table->foreign(['event_id'], null)->references(['id'])->on('events')->onUpdate('no action')->onDelete('cascade');
@@ -77,7 +77,7 @@ return new class extends Migration
 
         Schema::create('event_zone_locks', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('event_id');
+            $table->unsignedInteger('event_id');
             $table->string('zone_name');
             $table->string('zone_key');
             $table->dateTime('locked_at')->nullable();
@@ -90,13 +90,13 @@ return new class extends Migration
 
         Schema::create('events', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('tournament_id');
+            $table->unsignedInteger('tournament_id');
             $table->date('event_date');
             $table->string('name')->nullable();
             $table->boolean('is_locked')->default(false);
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
-            $table->integer('structure_id')->nullable();
+            $table->unsignedInteger('structure_id')->nullable();
             $table->foreign(['structure_id'], null)->references(['id'])->on('structures')->onUpdate('no action')->onDelete('set null');
             $table->foreign(['tournament_id'], null)->references(['id'])->on('tournaments')->onUpdate('no action')->onDelete('cascade');
         });
@@ -136,7 +136,7 @@ return new class extends Migration
 
         Schema::create('meteosat_jobs', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('fishing_event_id')->unique();
+            $table->unsignedInteger('fishing_event_id')->unique();
             $table->dateTime('run_at')->index();
             $table->string('status')->default('pending')->index();
             $table->integer('attempts')->default(0);
@@ -169,7 +169,7 @@ return new class extends Migration
             $table->string('last_known_name')->nullable();
             $table->string('anonymized_code')->nullable();
             $table->dateTime('anonymized_at')->nullable();
-            $table->integer('structure_id')->nullable();
+            $table->unsignedInteger('structure_id')->nullable();
             $table->foreign(['structure_id'], null)->references(['id'])->on('structures')->onUpdate('no action')->onDelete('set null');
         });
 
@@ -181,7 +181,7 @@ return new class extends Migration
 
         Schema::create('pool_pegs', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('tournament_id');
+            $table->unsignedInteger('tournament_id');
             $table->string('peg_number');
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
@@ -193,7 +193,7 @@ return new class extends Migration
 
         Schema::create('secure_action_tokens', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('user_id');
+            $table->unsignedInteger('user_id');
             $table->string('action');
             $table->string('code_hash');
             $table->text('payload')->nullable();
@@ -224,8 +224,8 @@ return new class extends Migration
 
         Schema::create('structure_lake_tournament', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('tournament_id');
-            $table->integer('structure_lake_id');
+            $table->unsignedInteger('tournament_id');
+            $table->unsignedInteger('structure_lake_id');
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
 
@@ -236,7 +236,7 @@ return new class extends Migration
 
         Schema::create('structure_lakes', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('structure_id');
+            $table->unsignedInteger('structure_id');
             $table->string('name');
             $table->integer('peg_count');
             $table->string('peg_prefix')->nullable();
@@ -264,7 +264,7 @@ return new class extends Migration
 
         Schema::create('teams', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('tournament_id');
+            $table->unsignedInteger('tournament_id');
             $table->string('name');
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
@@ -281,13 +281,13 @@ return new class extends Migration
             $table->integer('team_size')->nullable();
             $table->integer('pool_capacity')->nullable();
             $table->boolean('allow_edge_repeats')->default(false);
-            $table->integer('structure_id')->nullable();
+            $table->unsignedInteger('structure_id')->nullable();
             $table->foreign(['structure_id'], null)->references(['id'])->on('structures')->onUpdate('no action')->onDelete('cascade');
         });
 
         Schema::create('trusted_devices', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('user_id');
+            $table->unsignedInteger('user_id');
             $table->string('device_name')->nullable();
             $table->string('token_hash');
             $table->string('user_agent')->nullable();
@@ -316,10 +316,10 @@ return new class extends Migration
 
         Schema::create('weight_entries', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('tournament_id');
-            $table->integer('event_id');
-            $table->integer('angler_id');
-            $table->integer('draw_id')->nullable();
+            $table->unsignedInteger('tournament_id');
+            $table->unsignedInteger('event_id');
+            $table->unsignedInteger('angler_id');
+            $table->unsignedInteger('draw_id')->nullable();
             $table->string('peg_number')->nullable();
             $table->decimal('weight_value');
             $table->dateTime('created_at')->nullable();
@@ -332,7 +332,7 @@ return new class extends Migration
 
         Schema::create('zones', function (Blueprint $table) {
             $table->increments('id');
-            $table->integer('tournament_id');
+            $table->unsignedInteger('tournament_id');
             $table->string('name');
             $table->string('start_number');
             $table->string('end_number');
