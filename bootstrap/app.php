@@ -2,12 +2,11 @@
 
 use App\Console\Commands\CheckSmtpConfig;
 use App\Console\Commands\GenerateWeightResultsPdf;
-use App\Console\Commands\MigrateMeteosatReports;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 
-return Application::configure(basePath: dirname(__DIR__))
+$app = Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         api: __DIR__.'/../routes/api.php',
@@ -25,6 +24,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withCommands([
         CheckSmtpConfig::class,
         GenerateWeightResultsPdf::class,
-        MigrateMeteosatReports::class,
     ])
     ->create();
+
+$app->usePublicPath($app->basePath());
+
+return $app;

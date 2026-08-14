@@ -43,12 +43,13 @@ Getting started is designed to be as simple as possible, even for shared hosting
 
 ### Method A: Standalone Web Installer (Recommended for Shared Hosting)
 You don't need SSH access, Composer, or Node.js. Just follow these steps:
-1. Download the `install.php` file from the `public/` directory of this repository.
-2. Upload `install.php` to your web server's public directory (e.g. `public_html`).
-3. Navigate to `http://your-domain.com/install.php` in your web browser.
-4. The wizard will automatically download the latest application code from GitHub, configure your database, and run all setup tasks!
+1. Download the `install.php` file from the root directory of this repository.
+2. Upload `install.php` to your web server's root directory (e.g. `public_html` or `web`).
+3. (Optional) If you have the repository ZIP file (e.g., `fishing_peg_manager.zip`), upload it to the same root directory. The installer will automatically detect it and skip downloading it from GitHub.
+4. Navigate to `http://your-domain.com/install.php` in your web browser.
+5. Accept the GNU AGPL-3.0 License, confirm requirements, configure your database, create the administrator account, and let the installer automatically delete itself and any remaining ZIP files.
 
-*(Note for the organizer: For the installer to work flawlessly on hosts without Composer, ensure the GitHub release URL points to a pre-compiled ZIP containing the `vendor` and `public/build` folders).*
+*(Note for the organizer: For the installer to work flawlessly on hosts without Composer, ensure the GitHub release URL points to a pre-compiled ZIP containing the `vendor` and `build` folders).*
 
 ### Method B: Advanced Setup (For VPS or Local Development)
 If you have SSH access and prefer setting it up manually:
@@ -57,8 +58,8 @@ If you have SSH access and prefer setting it up manually:
    composer install
    npm install && npm run build
    ```
-2. Start your local server (`php artisan serve`) or point your web server to the `public/` directory.
-3. Open your browser and navigate to the `/install` route. Fill out the simple visual form, and the system will automatically generate your `.env` file and prepare the database for you.
+2. Point your web server's document root directly to the project root directory.
+3. Navigate to `http://your-domain.com/install.php` to configure the database and create the admin user.
 
 ## 2) Main Commands
 - `composer install` · installs PHP dependencies.
