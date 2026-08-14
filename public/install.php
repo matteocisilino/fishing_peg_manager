@@ -55,12 +55,31 @@ $error = '';
 $success = '';
 
 function checkRequirements() {
+    $noPsrConflict = true;
+    if (extension_loaded('psr')) {
+        try {
+            if (interface_exists('Psr\Log\LoggerInterface')) {
+                $ref = new \ReflectionMethod('Psr\Log\LoggerInterface', 'emergency');
+                $params = $ref->getParameters();
+                if (count($params) > 0) {
+                    $type = $params[0]->getType();
+                    if ($type === null) {
+                        $noPsrConflict = false;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            $noPsrConflict = false;
+        }
+    }
+
     $reqs = [
         'PHP >= 8.2' => version_compare(PHP_VERSION, '8.2.0', '>='),
         'cURL Extension' => extension_loaded('curl'),
         'ZipArchive Extension' => class_exists('ZipArchive'),
         'PDO Extension' => extension_loaded('pdo'),
         'Write Permissions (Root)' => is_writable(INSTALL_ROOT),
+        'No conflicting global PSR extension' => $noPsrConflict,
     ];
     return $reqs;
 }
@@ -275,6 +294,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$error) {
+                $check = checkRequirements();
+                if (!$check['No conflicting global PSR extension']) {
+                    $error = "PHP extension conflict: The global PHP extension 'psr' is enabled on your server and has an outdated/incompatible version of Psr\\Log\\LoggerInterface. This causes a Fatal Error with Laravel and Monolog. Please disable the 'psr' extension in your PHP settings (e.g. ISPConfig / cPanel) to continue.";
+                }
+            }
+
+            if (!$error) {
                 // Bootstrap Laravel to run migrations and key generate
                 if (file_exists(INSTALL_ROOT . '/vendor/autoload.php') && file_exists(INSTALL_ROOT . '/bootstrap/app.php')) {
                     require INSTALL_ROOT . '/vendor/autoload.php';
@@ -359,6 +385,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </form>
             <?php else: ?>
                 <p style="color: #f87171; margin-top: 1rem;">Please fix the missing requirements above to continue.</p>
+                <?php if (isset($reqs['No conflicting global PSR extension']) && !$reqs['No conflicting global PSR extension']): ?>
+                    <div style="background: #7f1d1d; border-radius: 6px; padding: 1rem; color: #fca5a5; font-size: 0.875rem; margin-top: 1rem; line-height: 1.5;">
+                        <strong>Conflict Detected:</strong> The PHP extension <code>psr</code> is globally enabled on your server and defines an outdated signature for <code>Psr\Log\LoggerInterface</code>. This causes a Fatal Error with Laravel and Monolog.<br><br>
+                        <strong>How to fix:</strong> Open your hosting control panel (e.g., ISPConfig / cPanel), go to "Select PHP Version" / "PHP Settings", and disable the <code>psr</code> extension for this domain.
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
 
         <?php elseif ($step == 2): ?>
