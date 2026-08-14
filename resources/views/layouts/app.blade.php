@@ -146,9 +146,7 @@
 @php
     $isAuthPage = request()->routeIs('login', 'login.*', 'password.*', 'otp.*');
 @endphp
-<div class="alert alert-danger text-center mb-0" role="alert">
-    verify technical sectors
-</div>
+
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
     <div class="container-fluid">
         <a class="navbar-brand" href="{{ route('dashboard') }}">Fishing Tournament</a>
