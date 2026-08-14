@@ -23,22 +23,19 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\EventZoneLock;
+use App\Http\Requests\StoreWeightsRequest;
 use App\Models\FishingEvent;
-use App\Models\MeteosatJob;
 use App\Models\Structure;
 use App\Models\Tournament;
-use App\Models\WeightEntry;
 use App\Models\User;
 use App\Services\Tournaments\TournamentStandingsCalculator;
 use App\Services\Weights\EventResultsPdfDataBuilder;
 use App\Services\Weights\PlacementCalculator;
+use App\Services\WeightService;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -48,8 +45,8 @@ class WeightController extends Controller
         private readonly PlacementCalculator $placementCalculator,
         private readonly TournamentStandingsCalculator $tournamentStandingsCalculator,
         private readonly EventResultsPdfDataBuilder $eventResultsPdfDataBuilder,
-    ) {
-    }
+        private readonly WeightService $weightService
+    ) {}
 
     public function index(Request $request): View
     {
@@ -130,7 +127,7 @@ class WeightController extends Controller
 
         $weightMap = $event->weightEntries->keyBy('angler_id');
         $placementData = $this->placementCalculator->calculate($event);
-        $zonesData = $this->prepareZoneDisplayData($event, $weightMap);
+        $zonesData = $this->weightService->prepareZoneDisplayData($event, $weightMap);
 
         return view('weights.show', [
             'event' => $event,
@@ -288,16 +285,10 @@ class WeightController extends Controller
         ]);
     }
 
-    public function store(Request $request, FishingEvent $event): RedirectResponse
+    public function store(StoreWeightsRequest $request, FishingEvent $event): RedirectResponse
     {
         $this->authorizeEventAccess($event);
-        $validated = $request->validate([
-            'zone_name' => ['required', 'array'],
-            'zone_name.*' => ['required', 'string'],
-            'weights' => ['nullable', 'array'],
-            'weights.*' => ['nullable', 'array'],
-            'weights.*.*' => ['nullable', 'numeric', 'min:0'],
-        ]);
+        $validated = $request->validated();
 
         $zoneNames = collect($validated['zone_name'])
             ->map(fn ($name) => trim((string) $name))
@@ -312,86 +303,22 @@ class WeightController extends Controller
                 ->withErrors(['general' => 'No valid zone to update.']);
         }
 
-        $event->load([
-            'draws.angler',
-            'zoneLocks',
-        ]);
-
-        $lockedZones = $event->zoneLocks->keyBy('zone_key');
-        $errors = [];
-        $updatedZones = [];
-
-        foreach ($zoneNames as $zoneName) {
-            $zoneKey = $this->normalizeZoneKey($zoneName);
-            if ($lockedZones->has($zoneKey)) {
-                $errors[] = "Zone '{$zoneName}' is already confirmed and cannot be modified.";
-                continue;
-            }
-
-            $zoneDraws = $event->draws->filter(function ($draw) use ($zoneKey) {
-                return $this->normalizeZoneKey($this->resolveZoneName($draw)) === $zoneKey;
-            })->values();
-
-            if ($zoneDraws->isEmpty()) {
-                $errors[] = "Zone '{$zoneName}' is not valid for this event.";
-                continue;
-            }
-
-            $zoneWeights = $weightsInput[$zoneName] ?? [];
-
-            try {
-                DB::transaction(function () use ($event, $zoneDraws, $zoneWeights) {
-                    foreach ($zoneDraws as $draw) {
-                        $anglerId = $draw->angler_id;
-                        if ($anglerId === null) {
-                            continue;
-                        }
-
-                        $valueRaw = $zoneWeights[$anglerId] ?? null;
-                        $value = $valueRaw === null || $valueRaw === '' ? null : (float)$valueRaw;
-
-                        if ($value === null) {
-                            WeightEntry::where('event_id', $event->id)
-                                ->where('angler_id', $anglerId)
-                                ->delete();
-                            continue;
-                        }
-
-                        WeightEntry::updateOrCreate(
-                            [
-                                'event_id' => $event->id,
-                                'angler_id' => $anglerId,
-                            ],
-                            [
-                                'tournament_id' => $event->tournament_id,
-                                'draw_id' => $draw->id,
-                                'peg_number' => $draw->peg_number,
-                                'weight_value' => $value,
-                            ]
-                        );
-                    }
-                });
-                $updatedZones[] = $zoneName;
-            } catch (\Throwable $throwable) {
-                report($throwable);
-                $errors[] = "Error saving weights for zone '{$zoneName}'.";
-            }
-        }
+        $res = $this->weightService->storeWeights($event, $zoneNames, $weightsInput);
 
         $response = redirect()->route('weights.show', $event);
 
-        if (!empty($updatedZones)) {
-            $zoneList = implode(', ', $updatedZones);
-            $response->with('status', count($updatedZones) === 1
+        if (!empty($res['updated'])) {
+            $zoneList = implode(', ', $res['updated']);
+            $response->with('status', count($res['updated']) === 1
                 ? "Weights updated correctly for zone '{$zoneList}'."
                 : "Weights updated correctly for zones: {$zoneList}.");
         }
 
-        if (!empty($errors)) {
-            $response->withErrors(['general' => implode(' ', $errors)]);
+        if (!empty($res['errors'])) {
+            $response->withErrors(['general' => implode(' ', $res['errors'])]);
         }
 
-        if (empty($updatedZones) && empty($errors)) {
+        if (empty($res['updated']) && empty($res['errors'])) {
             $response->with('status', 'No changes to weights.');
         }
 
@@ -400,6 +327,8 @@ class WeightController extends Controller
 
     public function lockZone(Request $request, FishingEvent $event): RedirectResponse
     {
+        $this->authorizeEventAccess($event);
+
         $validated = $request->validate([
             'zone_name' => ['required', 'string'],
             'zone_names' => ['nullable', 'array'],
@@ -423,80 +352,16 @@ class WeightController extends Controller
                 ->withErrors(['zone' => 'No valid zone to confirm.']);
         }
 
-        $event->load([
-            'draws.angler.zone',
-            'weightEntries',
-            'zoneLocks',
-        ]);
-
-        $weightMap = $event->weightEntries->keyBy('angler_id');
-        $success = [];
-        $errors = [];
-
-        foreach ($zoneList as $zoneName) {
-            $zoneKey = $this->normalizeZoneKey($zoneName);
-            $matchingDraws = $event->draws->filter(function ($draw) use ($zoneKey) {
-                return $this->normalizeZoneKey($this->resolveZoneName($draw)) === $zoneKey;
-            });
-
-            if ($matchingDraws->isEmpty()) {
-                $errors[] = "Zone '{$zoneName}' is not valid for this event.";
-                continue;
-            }
-
-            $alreadyLocked = $event->zoneLocks->firstWhere('zone_key', $zoneKey);
-            if ($alreadyLocked) {
-                continue;
-            }
-
-            $zoneValid = true;
-            foreach ($matchingDraws as $draw) {
-                if ($draw->angler_id === null) {
-                    $errors[] = "Some pegs in zone '{$zoneName}' do not have an assigned participant.";
-                    $zoneValid = false;
-                    break;
-                }
-                $entry = $weightMap->get($draw->angler_id);
-                if ($entry === null || $entry->weight_value === null) {
-                    $errors[] = "Complete all weights for zone '{$zoneName}' before confirming.";
-                    $zoneValid = false;
-                    break;
-                }
-            }
-
-            if (!$zoneValid) {
-                continue;
-            }
-
-            EventZoneLock::updateOrCreate(
-                [
-                    'event_id' => $event->id,
-                    'zone_key' => $zoneKey,
-                ],
-                [
-                    'zone_name' => $zoneName,
-                    'locked_at' => now(),
-                ]
-            );
-
-            $success[] = $zoneName;
-        }
+        $res = $this->weightService->lockZone($event, $zoneList);
 
         $response = redirect()->route('weights.show', $event);
 
-        if (!empty($success)) {
-            $response->with('status', 'Confirmed zones: ' . implode(', ', $success));
+        if (!empty($res['success'])) {
+            $response->with('status', 'Confirmed zones: ' . implode(', ', $res['success']));
         }
 
-        if (!empty($errors)) {
-            $response->withErrors(['zone' => implode(' ', $errors)]);
-        }
-
-        if (!empty($success)) {
-            $event->loadMissing(['draws.angler.zone', 'weightEntries', 'zoneLocks', 'tournament']);
-            if ($this->allZonesLocked($event)) {
-                $this->scheduleMeteosatJob($event);
-            }
+        if (!empty($res['errors'])) {
+            $response->withErrors(['zone' => implode(' ', $res['errors'])]);
         }
 
         return $response;
@@ -504,163 +369,24 @@ class WeightController extends Controller
 
     public function unlockZone(Request $request, FishingEvent $event): RedirectResponse
     {
+        $this->authorizeEventAccess($event);
+
         $validated = $request->validate([
             'zone_name' => ['required', 'string'],
         ]);
 
         $zoneName = trim($validated['zone_name']);
-        $zoneKey = $this->normalizeZoneKey($zoneName);
+        $error = $this->weightService->unlockZone($event, $zoneName);
 
-        $event->load('zoneLocks');
-        $lock = $event->zoneLocks->firstWhere('zone_key', $zoneKey);
-
-        if ($lock === null) {
+        if ($error !== null) {
             return redirect()
                 ->route('weights.show', $event)
-                ->withErrors(['zone' => "Zone '{$zoneName}' is not confirmed."]);
+                ->withErrors(['zone' => $error]);
         }
-
-        $lock->delete();
 
         return redirect()
             ->route('weights.show', $event)
             ->with('status', "Zone '{$zoneName}' unlocked: weights can be modified.");
-    }
-
-    /**
-     * @return \Illuminate\Support\Collection<int,array{name:string,key:string,draws:\Illuminate\Support\Collection,min_peg:?string,min_sort_key:string,complete:bool,locked:bool,locked_at:?\Illuminate\Support\Carbon,lock_form_id:string}>
-     */
-    private function prepareZoneDisplayData(FishingEvent $event, \Illuminate\Support\Collection $weightMap)
-    {
-        $locks = $event->zoneLocks->keyBy('zone_key');
-        $groups = [];
-
-        foreach ($event->draws as $draw) {
-            $name = $this->resolveZoneName($draw);
-            $key = $this->normalizeZoneKey($name);
-            if (!isset($groups[$key])) {
-                $groups[$key] = [
-                    'name' => $name,
-                    'key' => $key,
-                    'draws' => [],
-                ];
-            }
-            $groups[$key]['draws'][] = $draw;
-        }
-
-        $zones = collect($groups)->map(function ($data) use ($locks, $weightMap) {
-            $draws = collect($data['draws'])
-                ->sortBy(fn ($draw) => $this->pegSortKey((string) $draw->peg_number))
-                ->values();
-            $firstDraw = $draws->first();
-            $minPeg = $firstDraw?->peg_number !== null ? (string) $firstDraw->peg_number : null;
-            $complete = $draws->every(function ($draw) use ($weightMap) {
-                $anglerId = $draw->angler_id;
-                if ($anglerId === null) {
-                    return false;
-                }
-                $entry = $weightMap->get($anglerId);
-                return $entry !== null && $entry->weight_value !== null;
-            });
-            $lock = $locks->get($data['key']);
-
-            return [
-                'name' => $data['name'],
-                'key' => $data['key'],
-                'draws' => $draws,
-                'min_peg' => $minPeg,
-                'min_sort_key' => $this->pegSortKey($minPeg),
-                'complete' => $complete,
-                'locked' => $lock !== null,
-                'locked_at' => optional($lock)->locked_at,
-            ];
-        })->sortBy([
-            fn ($zone) => $zone['min_sort_key'],
-            fn ($zone) => $zone['name'],
-        ])->values();
-
-        return $zones->map(function ($zone, $index) {
-            $zone['lock_form_id'] = 'lock-zone-' . Str::slug($zone['name']) . '-' . $index;
-            $zone['unlock_form_id'] = 'unlock-zone-' . Str::slug($zone['name']) . '-' . $index;
-            return $zone;
-        });
-    }
-
-    private function allZonesLocked(FishingEvent $event): bool
-    {
-        $zoneKeys = $event->draws
-            ->map(fn ($draw) => $this->normalizeZoneKey($this->resolveZoneName($draw)))
-            ->filter()
-            ->unique()
-            ->values();
-
-        if ($zoneKeys->isEmpty()) {
-            return false;
-        }
-
-        $lockedKeys = $event->zoneLocks
-            ->map(fn ($lock) => $this->normalizeZoneKey($lock->zone_key))
-            ->filter()
-            ->unique()
-            ->values();
-
-        return $zoneKeys->diff($lockedKeys)->isEmpty();
-    }
-
-    private function scheduleMeteosatJob(FishingEvent $event): void
-    {
-        if (!$event->tournament?->isPool()) {
-            return;
-        }
-
-        if ($event->meteosatReport()->exists()) {
-            return;
-        }
-
-        if (method_exists($event, 'meteosatJob') && $event->meteosatJob()->exists()) {
-            return;
-        }
-
-        $eventDate = $event->event_date;
-        $runAt = $eventDate
-            ? Carbon::parse($eventDate)->setTime(15, 0, 0)
-            : now()->setTime(15, 0, 0);
-
-        if ($runAt->isPast()) {
-            $runAt = now()->addMinutes(1);
-        }
-
-        $event->meteosatJob()->create([
-            'run_at' => $runAt,
-            'status' => 'pending',
-            'attempts' => 0,
-        ]);
-    }
-
-    private function pegSortKey(?string $peg): string
-    {
-        if ($peg === null || $peg === '') {
-            return '9|';
-        }
-
-        if (is_numeric($peg)) {
-            $numeric = (int) $peg;
-            return '0|' . str_pad((string) $numeric, 10, '0', STR_PAD_LEFT);
-        }
-
-        return '1|' . strtoupper($peg);
-    }
-
-    private function resolveZoneName(\App\Models\Draw $draw): string
-    {
-        return $draw->frozen_zone_name
-            ?? optional($draw->angler->zone)->name
-            ?? 'Zona';
-    }
-
-    private function normalizeZoneKey(string $zoneName): string
-    {
-        return strtoupper(trim($zoneName));
     }
 
     private function authorizeEventAccess(FishingEvent $event): void
