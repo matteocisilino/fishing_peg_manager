@@ -110,6 +110,29 @@ function downloadFile($url, $path) {
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
+    if ($action === 'cleanup') {
+        $zips = glob(__DIR__ . '/*.zip');
+        foreach ($zips as $zip) {
+            if (file_exists($zip)) {
+                unlink($zip);
+            }
+        }
+        $zipsRoot = glob(INSTALL_ROOT . '/*.zip');
+        foreach ($zipsRoot as $zip) {
+            if (file_exists($zip)) {
+                unlink($zip);
+            }
+        }
+        
+        $installerPath = __FILE__;
+        if (file_exists($installerPath)) {
+            unlink($installerPath);
+        }
+        
+        header("Location: ./");
+        exit;
+    }
+
     if ($action === 'download') {
         // Step 1: Check for local ZIP first to avoid downloading it
         $localZip = '';
@@ -525,8 +548,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php elseif ($step == 4): ?>
             <h3 style="color: #4ade80;">Installation Complete! 🎉</h3>
             <p>The application has been successfully configured and the administrator account was created.</p>
-            <p><strong>Note:</strong> For security reasons, please delete this <code>install.php</code> file from your server.</p>
-            <a href="./" class="btn" style="width: 100%; text-align: center; box-sizing: border-box;">Go to Application</a>
+            <p>For security reasons, you must delete this <code>install.php</code> installer script before launching.</p>
+            
+            <form method="POST" onsubmit="return confirm('Are you sure you want to permanently delete this installer script (install.php) and launch the application?');" style="margin-top: 1.5rem;">
+                <input type="hidden" name="action" value="cleanup">
+                <button type="submit" class="btn" style="width: 100%; text-align: center;">Delete Installer & Launch Application</button>
+            </form>
+            <a href="./" style="display: block; text-align: center; margin-top: 1rem; color: #94a3b8; font-size: 0.875rem;">Or continue without deleting (not recommended)</a>
         <?php endif; ?>
     </div>
 </body>
