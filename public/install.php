@@ -56,16 +56,21 @@ $success = '';
 
 function checkRequirements() {
     $noPsrConflict = true;
+    $psrExists = false;
     if (extension_loaded('psr')) {
+        $psrExists = interface_exists('Psr\Log\LoggerInterface', true);
+    } else {
+        $psrExists = interface_exists('Psr\Log\LoggerInterface', false);
+    }
+
+    if ($psrExists) {
         try {
-            if (interface_exists('Psr\Log\LoggerInterface')) {
-                $ref = new \ReflectionMethod('Psr\Log\LoggerInterface', 'emergency');
-                $params = $ref->getParameters();
-                if (count($params) > 0) {
-                    $type = $params[0]->getType();
-                    if ($type === null) {
-                        $noPsrConflict = false;
-                    }
+            $ref = new \ReflectionMethod('Psr\Log\LoggerInterface', 'emergency');
+            $params = $ref->getParameters();
+            if (count($params) > 0) {
+                $type = $params[0]->getType();
+                if ($type === null) {
+                    $noPsrConflict = false;
                 }
             }
         } catch (\Throwable $e) {
