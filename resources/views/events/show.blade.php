@@ -6,8 +6,7 @@
         <h1 class="mb-3">{{ $event->name }} ({{ $event->event_date->format('Y-m-d') }})</h1>
         <p>Tournament: <a href="{{ route('tournaments.show', $event->tournament) }}">{{ $event->tournament->name }}</a></p>
         <p class="text-muted">
-            Host facility:
-            <strong>{{ $event->structure->name ?? $event->tournament->structure->name ?? 'N/A' }}</strong>
+            Host venue: <strong>{{ $event->structure->name }}</strong>
         </p>
         <a href="{{ route('tournaments.index') }}" class="btn btn-link mb-3">&laquo; Back to home</a>
 

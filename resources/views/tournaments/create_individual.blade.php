@@ -196,7 +196,7 @@
                     <p class="text-muted">
                         Define one or more events indicating date and name.
                         @if($canChooseEventStructure)
-                            You can assign the facility where each event will take place.
+                            You can assign the venue where each event will take place.
                         @endif
                     </p>
                     <div class="table-responsive">
@@ -206,7 +206,7 @@
                                     <th>Date</th>
                                     <th>Event name</th>
                                     @if($canChooseEventStructure)
-                                        <th>Facility</th>
+                                        <th>Venue</th>
                                     @endif
                                     <th>Status</th>
                                     <th style="width: 80px;">Actions</th>
@@ -230,7 +230,7 @@
                                         @if($canChooseEventStructure)
                                             <td>
                                                 <select name="event_structure_id[]" class="form-select form-select-sm" required>
-                                                    <option value="">Select facility</option>
+                                                    <option value="">Select venue</option>
                                                     @foreach($structures as $structure)
                                                         <option value="{{ $structure->id }}" @selected($selectedStructureId === $structure->id)>
                                                             {{ $structure->name }}

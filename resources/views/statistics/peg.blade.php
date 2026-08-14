@@ -6,7 +6,7 @@
         <div class="d-flex justify-content-between align-items-center mb-3">
             <div>
                 <h1 class="mb-1">{{ $structure->name }} · Peg {{ $pegNumber }}</h1>
-                <p class="text-muted mb-0">Weights recorded in the events of the facility</p>
+                <p class="text-muted mb-0">Weights recorded in the events of the venue</p>
             </div>
             <a href="{{ route('statistics.index') }}" class="btn btn-outline-secondary">&laquo; Back to statistics</a>
         </div>

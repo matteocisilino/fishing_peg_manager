@@ -7,16 +7,16 @@
 @endphp
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div>
-        <h1 class="h3 mb-0">Facilities</h1>
-        <p class="text-muted mb-0">Manage the facilities associated with the administrators</p>
+        <h1 class="h3 mb-0">Venues</h1>
+        <p class="text-muted mb-0">Manage the venues associated with administrators</p>
     </div>
     @if($canCreate)
-        <a href="{{ route('structures.create') }}" class="btn btn-primary">New facility</a>
+        <a href="{{ route('structures.create') }}" class="btn btn-primary">New venue</a>
     @endif
 </div>
 
 @if($structures->isEmpty())
-    <div class="alert alert-info">There are no registered facilities.</div>
+    <div class="alert alert-info">There are no registered venues.</div>
 @else
     <div class="table-responsive">
         <table class="table table-striped align-middle">
@@ -24,7 +24,7 @@
                 <tr>
                     <th>Name</th>
                     <th>Address</th>
-                    <th>Province</th>
+                    <th>County / Province</th>
                     <th>Municipality</th>
                     <th>Contacts</th>
                     <th>Coordinates</th>
@@ -63,7 +63,7 @@
                         <td class="text-end">
                             <a href="{{ route('structures.edit', $structure) }}" class="btn btn-sm btn-outline-primary">Edit</a>
                             @if($user->isSuperAdmin())
-                                <form action="{{ route('structures.destroy', $structure) }}" method="post" class="d-inline" onsubmit="return confirm('Delete this facility?');">
+                                <form action="{{ route('structures.destroy', $structure) }}" method="post" class="d-inline" onsubmit="return confirm('Delete this venue?');">
                                     @csrf
                                     @method('delete')
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>

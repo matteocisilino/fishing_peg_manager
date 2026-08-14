@@ -155,14 +155,13 @@
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto align-items-center gap-2 flex-column flex-lg-row">
-                @auth
-                    @php
+                @auth                    @php
                         /** @var \App\Models\User $navUser */
                         $navUser = auth()->user();
-                        $structureLabel = 'Structures';
+                        $venueLabel = 'Venues';
                         if($navUser->role === \App\Models\User::ROLE_ADMIN) {
-                            $structureCount = \App\Models\Structure::count();
-                            $structureLabel = $structureCount === 1 ? 'Structure' : 'Structures';
+                            $venueCount = \App\Models\Structure::count();
+                            $venueLabel = $venueCount === 1 ? 'Venue' : 'Venues';
                         }
                     @endphp
                     <li class="nav-item"><a class="nav-link" href="{{ route('dashboard') }}">Home</a></li>
@@ -180,6 +179,7 @@
                                 </div>
                             </div>
                         </li>
+
                         <li class="nav-item dropdown nav-square" data-dropdown-manual-container>
                             <a class="dropdown-toggle nav-link" href="#" role="button" data-dropdown-manual aria-expanded="false">
                                 Settings
@@ -188,9 +188,10 @@
                                 <div class="d-flex flex-column gap-2 text-end">
                                     <a class="btn btn-outline-light btn-sm" href="{{ route('security-settings.edit') }}">OTP Security</a>
                                     <a class="btn btn-outline-light btn-sm" href="{{ route('trusted-devices.index') }}">Devices</a>
-                                    <a class="btn btn-outline-light btn-sm" href="{{ route('structures.index') }}">Structures</a>
+                                    <a class="btn btn-outline-light btn-sm" href="{{ route('structures.index') }}">Venues</a>
                                     <a class="btn btn-outline-light btn-sm" href="{{ route('users.index') }}">Users</a>
                                     <a class="btn btn-outline-light btn-sm" href="{{ route('participants.index') }}">Anglers</a>
+                                    <a class="btn btn-outline-light btn-sm" href="{{ route('updates.index') }}">Check Updates</a>
                                 </div>
                             </div>
                         </li>
@@ -202,7 +203,7 @@
                         <span class="text-light">|</span>
                         <li class="nav-item"><a class="nav-link" href="{{ route('tournaments.create_pool') }}">New pool tournament</a></li>
                         <span class="text-light">|</span>
-                        <li class="nav-item"><a class="nav-link" href="{{ route('structures.index') }}">{{ $structureLabel }}</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{{ route('structures.index') }}">{{ $venueLabel }}</a></li>>
                         <span class="text-light">|</span>
                     @endif
 
@@ -222,6 +223,44 @@
             </ul>
         </div>
         <div class="d-flex align-items-center gap-2 text-white">
+            @php
+                $friendlyLabels = [
+                    'en_GB' => '🇬🇧 English (UK)',
+                    'it' => '🇮🇹 Italiano',
+                    'fr_FR' => '🇫🇷 Français',
+                    'es_ES' => '🇪🇸 Español',
+                    'pt_PT' => '🇵🇹 Português',
+                    'ca_ES' => '🇪🇸 Català',
+                    'ca_ES_valencia' => '🇪🇸 Valencià',
+                ];
+                $availableLocales = [];
+                $langFiles = glob(base_path('lang/*.json'));
+                if (is_array($langFiles)) {
+                    foreach ($langFiles as $file) {
+                        $code = pathinfo($file, PATHINFO_FILENAME);
+                        $availableLocales[$code] = $friendlyLabels[$code] ?? strtoupper(str_replace('_', '-', $code));
+                    }
+                }
+                if (empty($availableLocales)) {
+                    $availableLocales['en_GB'] = '🇬🇧 English (UK)';
+                }
+                $currentLocale = app()->getLocale();
+            @endphp
+            <div class="dropdown">
+                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    🌐 {{ $availableLocales[$currentLocale] ?? strtoupper($currentLocale) }}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow">
+                    @foreach($availableLocales as $code => $label)
+                        <li>
+                            <a class="dropdown-item @if($currentLocale === $code) active @endif" href="{{ route('lang.switch', $code) }}">
+                                {{ $label }}
+                            </a>
+                        </li>
+                    @endforeach
+                </ul>
+            </div>
+
             @auth
                 <span class="text-uppercase small badge bg-secondary">
                     {{ str_replace('_', ' ', auth()->user()->role) }}
@@ -229,7 +268,7 @@
                 <span>{{ auth()->user()->name }}</span>
                 <form method="post" action="{{ route('logout') }}">
                     @csrf
-                    <button type="submit" class="btn btn-outline-light btn-sm">Logout</button>
+                    <button type="submit" class="btn btn-outline-light btn-sm">{{ __('Logout') }}</button>
                 </form>
             @else
                 <a href="{{ route('login') }}" class="btn btn-outline-light btn-sm">Login</a>

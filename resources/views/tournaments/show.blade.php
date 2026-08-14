@@ -180,7 +180,7 @@
                                 <tr>
                                     <th>Date</th>
                                     <th>Name</th>
-                                    <th>Facility</th>
+                                    <th>Venue</th>
                                     <th>Status</th>
                                     <th>Draw</th>
                                     <th>Weights / rankings summary</th>

@@ -42,7 +42,7 @@
                            data-structure="{{ $structure->id }}"
                            @unless($isActive) disabled @endunless>
                     <p class="text-muted mb-0">
-                        This facility has only one lake: <strong>{{ $lake->name }}</strong>
+                        This venue has only one lake: <strong>{{ $lake->name }}</strong>
                         ({{ $lake->peg_count }} pegs
                         @if($lake->peg_prefix)
                             · prefix {{ strtoupper($lake->peg_prefix) }}
@@ -86,14 +86,14 @@
             </div>
         @empty
             <div class="alert alert-warning mb-0">
-                There are no facilities available to configure.
+                There are no venues available to configure.
             </div>
         @endforelse
         <p class="small text-muted mb-0 mt-3">
-            When changing facility, the lakes associated with the selected one will be shown; at least one must be active.
+            When changing venue, the lakes associated with the selected one will be shown; at least one must be active.
         </p>
     </div>
 </div>
 <div class="alert alert-info" data-lake-required-warning hidden>
-    Select at least one lake of the facility to configure zones, pegs, and participants.
+    Select at least one lake of the venue to configure zones, pegs, and participants.
 </div>

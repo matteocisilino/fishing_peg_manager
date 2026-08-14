@@ -27,7 +27,7 @@
 @endphp
 
 <div class="mb-3">
-    <label for="name" class="form-label">Facility name</label>
+    <label for="name" class="form-label">Venue name</label>
     <input type="text"
            name="name"
            id="name"
@@ -176,7 +176,7 @@
     </div>
 @else
     <div class="alert alert-secondary">
-        Facility linked to your administrator profile: <strong>{{ $user->name }}</strong>
+        Venue linked to your administrator profile: <strong>{{ $user->name }}</strong>
     </div>
 @endif
 
@@ -187,7 +187,7 @@
     </div>
     <div class="card-body">
         <p class="text-muted mb-3">
-            Define the lakes managed by the facility, indicating available pegs and the prefix (letters/numbers, without spaces) that will be prepended to the pegs
+            Define the lakes managed by the venue, indicating available pegs and the prefix (letters/numbers, without spaces) that will be prepended to the pegs
             <small class="text-muted">(e.g. <strong>B</strong> → B1, B2, …)</small>.
         </p>
         @error('lakes')<div class="alert alert-danger py-2">{{ $message }}</div>@enderror

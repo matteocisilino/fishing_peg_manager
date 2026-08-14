@@ -166,9 +166,9 @@
                         </div>
                         @if($canChooseEventStructure)
                             <div class="col-md-3 col-lg-4">
-                                <label class="form-label">Facility</label>
+                                <label class="form-label">Venue</label>
                                 <select name="event_structure_id[]" class="form-select form-select-sm" required>
-                                    <option value="">Select facility</option>
+                                    <option value="">Select venue</option>
                                     @foreach($structures as $structure)
                                         <option value="{{ $structure->id }}" @selected($selectedEventStructure === $structure->id)>
                                             {{ $structure->name }}

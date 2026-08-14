@@ -15,7 +15,7 @@
                         <table class="table table-sm">
                             <thead>
                                 <tr>
-                                    <th>Facility</th>
+                                    <th>Venue</th>
                                     <th>Peg</th>
                                     <th>Total points</th>
                                 </tr>

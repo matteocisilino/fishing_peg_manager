@@ -546,9 +546,9 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Name</th>
+                                    <th>Event name</th>
                                     @if($canChooseEventStructure)
-                                        <th>Facility</th>
+                                        <th>Venue</th>
                                     @endif
                                     <th>Status</th>
                                     <th>Actions</th>
@@ -567,7 +567,7 @@
                                             <td>
                                                 <?php $selectedStructureId = $event->structure_id ?? $tournament->structure_id; ?>
                                                 <select name="event_structure_id[]" class="form-select form-select-sm" {{ $event->is_locked ? 'disabled' : '' }} required>
-                                                    <option value="">Select facility</option>
+                                                    <option value="">Select venue</option>
                                                     @foreach($structures as $structure)
                                                         <option value="{{ $structure->id }}" @selected((int)$selectedStructureId === $structure->id)>
                                                             {{ $structure->name }}

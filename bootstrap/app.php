@@ -14,6 +14,9 @@ $app = Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->web(append: [
+            \App\Http\Middleware\SetLocaleMiddleware::class,
+        ]);
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
         ]);
@@ -24,6 +27,7 @@ $app = Application::configure(basePath: dirname(__DIR__))
     ->withCommands([
         CheckSmtpConfig::class,
         GenerateWeightResultsPdf::class,
+        \App\Console\Commands\CheckAppUpdate::class,
     ])
     ->create();
 

@@ -10,6 +10,20 @@
             <a href="{{ route('tournaments.create_pool') }}" class="btn btn-outline-warning">+ Create pool tournament</a>
         </div>
 
+        @if(\App\Models\Structure::count() === 0)
+            <div class="alert alert-warning border-warning shadow-sm mb-4">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <h4 class="alert-heading h5 mb-1"> Welcome to Fishing Tournament Manager!</h4>
+                        <p class="mb-0">To get started, configure your first Venue. You need at least one Venue to manage lakes, pegs, and tournaments.</p>
+                    </div>
+                    <a href="{{ route('structures.create') }}" class="btn btn-warning fw-semibold text-dark shrink-0">
+                         Create First Venue
+                    </a>
+                </div>
+            </div>
+        @endif
+
         @if($activeTournaments->isEmpty() && $completedTournaments->isEmpty())
             <div class="alert alert-info">No tournaments found. Create the first one.</div>
         @endif

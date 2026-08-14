@@ -287,6 +287,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            $appLocale = trim($_POST['app_locale'] ?? 'en_GB');
+            if ($appLocale) {
+                if (preg_match('/^APP_LOCALE=.*/m', $envContent)) {
+                    $envContent = preg_replace('/^APP_LOCALE=.*/m', 'APP_LOCALE=' . $appLocale, $envContent);
+                } else {
+                    $envContent .= "\nAPP_LOCALE=" . $appLocale . "\n";
+                }
+            }
+
             file_put_contents(INSTALL_ROOT . '/.env', $envContent);
 
             // Step 4: Run Composer Install if needed
@@ -527,14 +536,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['do_migrate']) && $_GET[
                     <input type="hidden" name="action" value="download">
                     
                     <div style="margin-top: 1.5rem; background: #0f172a; padding: 1rem; border-radius: 6px; border: 1px solid #475569; max-height: 120px; overflow-y: auto; font-size: 0.875rem; color: #94a3b8; line-height: 1.4;">
-                        <strong>GNU Affero General Public License v3 (AGPL-3.0)</strong><br><br>
-                        This software is Free Software, free as in freedom ("free speech") and free as in price ("free beer"). Under the terms of the AGPL-3.0, you are permitted to run, copy, distribute, study, modify, and improve the software. If you modify this software and make it available to users over a network, you must make your modified source code available to those users under the same license terms.
+                        <strong>GNU Affero General Public Licence v3 (AGPL-3.0)</strong><br><br>
+                        This software is Free Software, free as in freedom ("free speech") and free as in price ("free beer"). Under the terms of the AGPL-3.0, you are permitted to run, copy, distribute, study, modify, and improve the software. If you modify this software and make it available to users over a network, you must make your modified source code available to those users under the same licence terms.
                     </div>
                     
                     <div style="margin-top: 1rem; display: flex; align-items: flex-start;">
                         <input type="checkbox" id="accept_license" name="accept_license" required style="width: auto; margin-top: 0.25rem; margin-right: 0.75rem;">
                         <label for="accept_license" style="display: inline; color: #f8fafc; font-size: 0.875rem; cursor: pointer; user-select: none;">
-                            I accept the terms of the <strong>GNU Affero General Public License (AGPL-3.0)</strong>
+                            I accept the terms of the <strong>GNU Affero General Public Licence (AGPL-3.0)</strong>
                         </label>
                     </div>
                     
@@ -565,6 +574,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['do_migrate']) && $_GET[
                 <div class="form-group">
                     <label>Application Name</label>
                     <input type="text" name="app_name" value="Fishing Tournament" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Application Language</label>
+                    <select name="app_locale">
+                        <?php
+                        $friendlyLabels = [
+                            'en_GB' => '🇬🇧 English (UK)',
+                            'it' => '🇮🇹 Italiano',
+                            'fr_FR' => '🇫🇷 Français',
+                            'es_ES' => '🇪🇸 Español',
+                            'pt_PT' => '🇵🇹 Português',
+                            'ca_ES' => '🇪🇸 Català',
+                            'ca_ES_valencia' => '🇪🇸 Valencià',
+                        ];
+                        $availableLocales = [];
+                        $langFiles = glob(INSTALL_ROOT . '/lang/*.json');
+                        if (is_array($langFiles)) {
+                            foreach ($langFiles as $file) {
+                                $code = pathinfo($file, PATHINFO_FILENAME);
+                                $availableLocales[$code] = $friendlyLabels[$code] ?? strtoupper(str_replace('_', '-', $code));
+                            }
+                        }
+                        if (empty($availableLocales)) {
+                            $availableLocales['en_GB'] = '🇬🇧 English (UK)';
+                        }
+                        foreach ($availableLocales as $code => $label):
+                        ?>
+                            <option value="<?= htmlspecialchars($code) ?>"><?= htmlspecialchars($label) ?></option>
+                        <?php endforeach; ?>
+                    </select>
                 </div>
 
                 <div class="form-group">

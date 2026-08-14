@@ -50,6 +50,13 @@ Route::post('/otp', [\App\Http\Controllers\OtpController::class, 'verify'])->nam
 Route::get('/install', [InstallController::class, 'show'])->name('install.show');
 Route::post('/install', [InstallController::class, 'process'])->name('install.process');
 
+Route::get('/lang/{locale}', function (string $locale) {
+    if (file_exists(base_path("lang/{$locale}.json")) || is_dir(base_path("lang/{$locale}"))) {
+        session(['locale' => $locale]);
+    }
+    return back();
+})->name('lang.switch');
+
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
@@ -70,6 +77,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/beta/otp-jolly', [BetaController::class, 'issueJollyOtp'])->middleware('role:super_admin')->name('beta.otp_jolly');
 
     Route::middleware('role:super_admin,admin')->group(function () {
+        Route::get('/updates', [\App\Http\Controllers\UpdateCheckController::class, 'index'])->name('updates.index');
         Route::get('/tournaments', [TournamentController::class, 'index'])->name('tournaments.index');
         Route::get('/tournaments/create', [TournamentController::class, 'create'])->name('tournaments.create');
         Route::get('/tournaments/create/individual', [TournamentController::class, 'createIndividual'])->name('tournaments.create_individual');

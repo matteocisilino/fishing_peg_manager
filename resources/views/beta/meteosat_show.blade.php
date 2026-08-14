@@ -14,7 +14,7 @@
         <div class="card mb-4">
             <div class="card-body">
                 <dl class="row mb-0">
-                    <dt class="col-sm-3">Facility</dt>
+                    <dt class="col-sm-3">Venue</dt>
                     <dd class="col-sm-9">{{ $report->structure->name ?? 'N/A' }}</dd>
                     <dt class="col-sm-3">Municipality</dt>
                     <dd class="col-sm-9">{{ $report->comune }}</dd>

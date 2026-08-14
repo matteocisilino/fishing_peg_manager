@@ -37,7 +37,7 @@
                                name="secondary_email"
                                class="form-control @error('secondary_email') is-invalid @enderror"
                                value="{{ old('secondary_email') }}"
-                               placeholder="e.g. admin@facility.com">
+                               placeholder="e.g. admin@venue.com">
                         @error('secondary_email')<div class="invalid-feedback">{{ $message }}</div>@enderror
                         <div class="form-text">Used for OTP and password recovery in case of issues with the primary address.</div>
                     </div>
