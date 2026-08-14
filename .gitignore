@@ -36,3 +36,5 @@ meteosat.json
 # Android app sources
 /android
 /fishing_mobile_app/android
+
+torneo_pesca_laravel.code-workspace

@@ -112,10 +112,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (empty($zips)) {
             $zips = glob(INSTALL_ROOT . '/*.zip');
         }
+        $zips = array_filter($zips, fn($f) => file_exists($f) && filesize($f) > 1024);
         if (!empty($zips)) {
-            $localZip = $zips[0];
+            $localZip = reset($zips);
         }
-        $useLocal = !empty($localZip) && file_exists($localZip) && filesize($localZip) > 0;
+        $useLocal = !empty($localZip);
         $zipPathToUse = $zipFile;
 
         if ($useLocal) {
@@ -157,6 +158,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Location: ?step=2");
                 exit;
             } else {
+                if (file_exists($zipFile)) {
+                    unlink($zipFile);
+                }
                 $error = "Failed to extract the ZIP file. ZipArchive::open returned error code: " . $res . ". (File: " . basename($zipPathToUse) . ", Size: " . filesize($zipPathToUse) . " bytes)";
             }
         }
