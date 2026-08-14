@@ -586,8 +586,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['do_migrate']) && $_GET[
                             'fr_FR' => '🇫🇷 Français',
                             'es_ES' => '🇪🇸 Español',
                             'pt_PT' => '🇵🇹 Português',
-                            'ca_ES' => '🇪🇸 Català',
-                            'ca_ES_valencia' => '🇪🇸 Valencià',
                         ];
                         $availableLocales = [];
                         $langFiles = glob(INSTALL_ROOT . '/lang/*.json');

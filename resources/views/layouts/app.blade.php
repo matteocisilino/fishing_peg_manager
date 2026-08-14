@@ -230,8 +230,6 @@
                     'fr_FR' => '🇫🇷 Français',
                     'es_ES' => '🇪🇸 Español',
                     'pt_PT' => '🇵🇹 Português',
-                    'ca_ES' => '🇪🇸 Català',
-                    'ca_ES_valencia' => '🇪🇸 Valencià',
                 ];
                 $availableLocales = [];
                 $langFiles = glob(base_path('lang/*.json'));

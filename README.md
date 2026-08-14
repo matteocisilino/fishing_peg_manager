@@ -100,7 +100,18 @@ If you have SSH access and prefer setting it up manually:
 
 ## 5) Multi-Language Support (i18n & Custom Translation Files)
 
-The application includes built-in dynamic multi-language (i18n) support. 
+The application includes built-in dynamic multi-language (i18n) support.
+
+### Installed Languages / Lingue Installate
+The following 5 translation files are included in the `lang/` directory:
+
+| Flag / Bandiera | Code / Codice | Language / Lingua | Region / Note |
+|---|---|---|---|
+| 🇬🇧 | `en_GB` | English (UK) | Master Language |
+| 🇮🇹 | `it` | Italiano | Italian |
+| 🇫🇷 | `fr_FR` | Français | French |
+| 🇪🇸 | `es_ES` | Español | Spanish |
+| 🇵🇹 | `pt_PT` | Português | Portuguese |
 
 ### How to Add New Languages
 Translators and administrators can add any language by dropping a single JSON translation dictionary into the `lang/` directory:

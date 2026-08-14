@@ -8,7 +8,7 @@ class LocaleTest extends TestCase
 {
     public function test_locale_switching_route_updates_session(): void
     {
-        $locales = ['it', 'fr_FR', 'es_ES', 'pt_PT', 'ca_ES_valencia', 'ca_ES'];
+        $locales = ['it', 'fr_FR', 'es_ES', 'pt_PT'];
         foreach ($locales as $locale) {
             $response = $this->get(route('lang.switch', $locale));
             $response->assertSessionHas('locale', $locale);
