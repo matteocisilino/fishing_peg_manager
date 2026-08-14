@@ -91,7 +91,12 @@ function downloadFile($url, $path) {
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
     curl_setopt($ch, CURLOPT_USERAGENT, 'Fishing-Tournament-Installer');
     curl_setopt($ch, CURLOPT_TIMEOUT, 240); // 4 minutes timeout
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
     $result = curl_exec($ch);
+    if ($result === false) {
+        $GLOBALS['curl_error'] = curl_error($ch);
+    }
     curl_close($ch);
     fclose($fp);
     return $result && file_exists($path) && filesize($path) > 0;
@@ -104,6 +109,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Step 1: Check for local ZIP first to avoid downloading it
         $localZip = '';
         $zips = glob(__DIR__ . '/*.zip');
+        if (empty($zips)) {
+            $zips = glob(INSTALL_ROOT . '/*.zip');
+        }
         if (!empty($zips)) {
             $localZip = $zips[0];
         }
@@ -115,16 +123,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             // Download the repository ZIP using helper function
             if (!downloadFile($repoUrl, $zipFile)) {
-                $error = "Failed to download the repository.";
+                $error = "Failed to download the repository. Curl error: " . ($GLOBALS['curl_error'] ?? 'Unknown error');
             }
         }
 
-        if (!file_exists($zipPathToUse) || filesize($zipPathToUse) == 0) {
+        if (!$error && (!file_exists($zipPathToUse) || filesize($zipPathToUse) == 0)) {
             $error = "Failed to obtain the repository ZIP (both local and remote failed).";
-        } else {
+        } elseif (!$error) {
             // Step 2: Extract
             $zip = new ZipArchive;
-            if ($zip->open($zipPathToUse) === TRUE) {
+            $res = $zip->open($zipPathToUse);
+            if ($res === TRUE) {
                 $zip->extractTo($extractDir);
                 $zip->close();
                 
@@ -148,7 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 header("Location: ?step=2");
                 exit;
             } else {
-                $error = "Failed to extract the ZIP file.";
+                $error = "Failed to extract the ZIP file. ZipArchive::open returned error code: " . $res . ". (File: " . basename($zipPathToUse) . ", Size: " . filesize($zipPathToUse) . " bytes)";
             }
         }
     } elseif ($action === 'configure') {
