@@ -65,12 +65,18 @@ function checkRequirements() {
 
     if ($psrExists) {
         try {
-            $ref = new \ReflectionMethod('Psr\Log\LoggerInterface', 'emergency');
-            $params = $ref->getParameters();
-            if (count($params) > 0) {
-                $type = $params[0]->getType();
-                if ($type === null) {
-                    $noPsrConflict = false;
+            $reflector = new \ReflectionClass('Psr\Log\LoggerInterface');
+            $filePath = $reflector->getFileName();
+            $isComposerPhar = $filePath && (str_contains($filePath, 'composer.phar') || str_contains($filePath, 'phar://'));
+
+            if (!$isComposerPhar) {
+                $ref = new \ReflectionMethod('Psr\Log\LoggerInterface', 'emergency');
+                $params = $ref->getParameters();
+                if (count($params) > 0) {
+                    $type = $params[0]->getType();
+                    if ($type === null) {
+                        $noPsrConflict = false;
+                    }
                 }
             }
         } catch (\Throwable $e) {
@@ -134,62 +140,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if ($action === 'download') {
-        // Step 1: Check for local ZIP first to avoid downloading it
-        $localZip = '';
-        $zips = glob(__DIR__ . '/*.zip');
-        if (empty($zips)) {
-            $zips = glob(INSTALL_ROOT . '/*.zip');
-        }
-        $zips = array_filter($zips, fn($f) => file_exists($f) && filesize($f) > 1024);
-        if (!empty($zips)) {
-            $localZip = reset($zips);
-        }
-        $useLocal = !empty($localZip);
-        $zipPathToUse = $zipFile;
-
-        if ($useLocal) {
-            $zipPathToUse = $localZip;
+        if (!isset($_POST['accept_license'])) {
+            $error = "You must accept the license terms to proceed.";
         } else {
-            // Download the repository ZIP using helper function
-            if (!downloadFile($repoUrl, $zipFile)) {
-                $error = "Failed to download the repository. Curl error: " . ($GLOBALS['curl_error'] ?? 'Unknown error');
+            // Step 1: Check for local ZIP first to avoid downloading it
+            $localZip = '';
+            $zips = glob(__DIR__ . '/*.zip');
+            if (empty($zips)) {
+                $zips = glob(INSTALL_ROOT . '/*.zip');
             }
-        }
+            $zips = array_filter($zips, fn($f) => file_exists($f) && filesize($f) > 1024);
+            if (!empty($zips)) {
+                $localZip = reset($zips);
+            }
+            $useLocal = !empty($localZip);
+            $zipPathToUse = $zipFile;
 
-        if (!$error && (!file_exists($zipPathToUse) || filesize($zipPathToUse) == 0)) {
-            $error = "Failed to obtain the repository ZIP (both local and remote failed).";
-        } elseif (!$error) {
-            // Step 2: Extract
-            $zip = new ZipArchive;
-            $res = $zip->open($zipPathToUse);
-            if ($res === TRUE) {
-                $zip->extractTo($extractDir);
-                $zip->close();
-                
-                // Cleanup ZIP files
-                if (file_exists($zipFile)) {
-                    unlink($zipFile);
-                }
-                if (file_exists($localZip)) {
-                    unlink($localZip);
-                }
-                
-                // Move contents from extracted folder to root
-                if (is_dir($laravelDir)) {
-                    $files = array_diff(scandir($laravelDir), ['.', '..']);
-                    foreach ($files as $file) {
-                        rename("$laravelDir/$file", "$extractDir/$file");
-                    }
-                    rmdir($laravelDir);
-                }
-
-                header("Location: ?step=2");
-                exit;
+            if ($useLocal) {
+                $zipPathToUse = $localZip;
             } else {
-                if (file_exists($zipFile)) {
-                    unlink($zipFile);
+                // Download the repository ZIP using helper function
+                if (!downloadFile($repoUrl, $zipFile)) {
+                    $error = "Failed to download the repository. Curl error: " . ($GLOBALS['curl_error'] ?? 'Unknown error');
                 }
-                $error = "Failed to extract the ZIP file. ZipArchive::open returned error code: " . $res . ". (File: " . basename($zipPathToUse) . ", Size: " . filesize($zipPathToUse) . " bytes)";
+            }
+
+            if (!$error && (!file_exists($zipPathToUse) || filesize($zipPathToUse) == 0)) {
+                $error = "Failed to obtain the repository ZIP (both local and remote failed).";
+            } elseif (!$error) {
+                // Step 2: Extract
+                $zip = new ZipArchive;
+                $res = $zip->open($zipPathToUse);
+                if ($res === TRUE) {
+                    $zip->extractTo($extractDir);
+                    $zip->close();
+                    
+                    // Cleanup ZIP files
+                    if (file_exists($zipFile)) {
+                        unlink($zipFile);
+                    }
+                    if (file_exists($localZip)) {
+                        unlink($localZip);
+                    }
+                    
+                    // Move contents from extracted folder to root
+                    if (is_dir($laravelDir)) {
+                        $files = array_diff(scandir($laravelDir), ['.', '..']);
+                        foreach ($files as $file) {
+                            rename("$laravelDir/$file", "$extractDir/$file");
+                        }
+                        rmdir($laravelDir);
+                    }
+
+                    header("Location: ?step=2");
+                    exit;
+                } else {
+                    if (file_exists($zipFile)) {
+                        unlink($zipFile);
+                    }
+                    $error = "Failed to extract the ZIP file. ZipArchive::open returned error code: " . $res . ". (File: " . basename($zipPathToUse) . ", Size: " . filesize($zipPathToUse) . " bytes)";
+                }
             }
         }
     } elseif ($action === 'configure') {
@@ -386,6 +396,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $app = require_once INSTALL_ROOT . '/bootstrap/app.php';
                 
                 try {
+                    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+                    $kernel->bootstrap();
+
                     $userClass = 'App\\Models\\User';
                     if (class_exists($userClass)) {
                         if ($userClass::where('email', $adminEmail)->exists()) {
@@ -469,8 +482,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php if ($allPassed): ?>
                 <form method="POST">
                     <input type="hidden" name="action" value="download">
-                    <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;" onclick="this.innerHTML='Downloading... Please wait';">Download & Extract</button>
+                    
+                    <div style="margin-top: 1.5rem; background: #0f172a; padding: 1rem; border-radius: 6px; border: 1px solid #475569; max-height: 120px; overflow-y: auto; font-size: 0.875rem; color: #94a3b8; line-height: 1.4;">
+                        <strong>GNU Affero General Public License v3 (AGPL-3.0)</strong><br><br>
+                        This software is Free Software, free as in freedom ("free speech") and free as in price ("free beer"). Under the terms of the AGPL-3.0, you are permitted to run, copy, distribute, study, modify, and improve the software. If you modify this software and make it available to users over a network, you must make your modified source code available to those users under the same license terms.
+                    </div>
+                    
+                    <div style="margin-top: 1rem; display: flex; align-items: flex-start;">
+                        <input type="checkbox" id="accept_license" name="accept_license" required style="width: auto; margin-top: 0.25rem; margin-right: 0.75rem;">
+                        <label for="accept_license" style="display: inline; color: #f8fafc; font-size: 0.875rem; cursor: pointer; user-select: none;">
+                            I accept the terms of the <strong>GNU Affero General Public License (AGPL-3.0)</strong>
+                        </label>
+                    </div>
+                    
+                    <button type="submit" id="download_btn" class="btn" style="width: 100%; margin-top: 1.5rem;" disabled onclick="this.innerHTML='Downloading... Please wait';">Download & Extract</button>
                 </form>
+                
+                <script>
+                    document.getElementById('accept_license').addEventListener('change', function() {
+                        document.getElementById('download_btn').disabled = !this.checked;
+                    });
+                </script>
             <?php else: ?>
                 <p style="color: #f87171; margin-top: 1rem;">Please fix the missing requirements above to continue.</p>
                 <?php if (isset($reqs['No conflicting global PSR extension']) && !$reqs['No conflicting global PSR extension']): ?>
