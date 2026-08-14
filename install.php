@@ -95,6 +95,30 @@ function checkRequirements() {
     return $reqs;
 }
 
+function applyPsrCompatibilityPatch() {
+    $loggerFile = INSTALL_ROOT . '/vendor/monolog/monolog/src/Monolog/Logger.php';
+    if (!file_exists($loggerFile)) {
+        return;
+    }
+    
+    $content = file_get_contents($loggerFile);
+    $methods = ['emergency', 'alert', 'critical', 'error', 'warning', 'notice', 'info', 'debug'];
+    foreach ($methods as $m) {
+        $content = preg_replace(
+            '/public function ' . $m . '\((?:string\\\|\\\?Stringable\s*)?\$message,\s*array \$context = \[\]\)(?::\s*void)?/i',
+            'public function ' . $m . '($message, array $context = [])',
+            $content
+        );
+    }
+    $content = preg_replace(
+        '/public function log\(\$level,\s*(?:string\\\|\\\?Stringable\s*)?\$message,\s*array \$context = \[\]\)(?::\s*void)?/i',
+        'public function log($level, $message, array $context = [])',
+        $content
+    );
+    
+    file_put_contents($loggerFile, $content);
+}
+
 function downloadFile($url, $path) {
     $ch = curl_init($url);
     $fp = fopen($path, 'w+');
@@ -364,12 +388,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            applyPsrCompatibilityPatch();
+
             if (!$error) {
                 header("Location: ?step=2&do_migrate=1");
                 exit;
             }
         }
-    }
     } elseif ($action === 'create_admin') {
         $adminName = trim($_POST['admin_name'] ?? '');
         $adminEmail = trim($_POST['admin_email'] ?? '');
@@ -386,6 +411,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $error = "Please enter a valid email address.";
         } else {
             // Bootstrap Laravel
+            applyPsrCompatibilityPatch();
             if (file_exists(INSTALL_ROOT . '/vendor/autoload.php') && file_exists(INSTALL_ROOT . '/bootstrap/app.php')) {
                 require INSTALL_ROOT . '/vendor/autoload.php';
                 $app = require_once INSTALL_ROOT . '/bootstrap/app.php';
@@ -416,11 +442,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch (\Exception $e) {
                     $error = "Failed to create administrator: " . $e->getMessage();
                 }
+            } else {
+                $error = "Dependencies not found. Unable to create administrator.";
+            }
         }
     }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['do_migrate']) && $_GET['do_migrate'] === '1') {
+    applyPsrCompatibilityPatch();
     if (file_exists(INSTALL_ROOT . '/vendor/autoload.php') && file_exists(INSTALL_ROOT . '/bootstrap/app.php')) {
         require INSTALL_ROOT . '/vendor/autoload.php';
         $app = require_once INSTALL_ROOT . '/bootstrap/app.php';
