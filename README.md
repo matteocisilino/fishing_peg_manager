@@ -1,3 +1,12 @@
+# Weight Units & Formats #
+Currently, weight management in the application is handled using the metric decimal format. Support is being developed for the following formats:
+- **Traditional British format** (e.g., `12 lb 8 oz`)
+- **British decimal format** (e.g., `12.5 lb`)
+the APP is absolutly BETA
+
+
+
+
 # Fishing Tournament Manager
 **"Be Your Own Tournament Master."**
 
