@@ -183,13 +183,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         unlink($localZip);
                     }
                     
-                    // Move contents from extracted folder to root
-                    if (is_dir($laravelDir)) {
-                        $files = array_diff(scandir($laravelDir), ['.', '..']);
-                        foreach ($files as $file) {
-                            rename("$laravelDir/$file", "$extractDir/$file");
+                    // Move contents from extracted folder to root dynamically
+                    $extractedSubdir = '';
+                    $subdirs = glob($extractDir . '/*', GLOB_ONLYDIR);
+                    foreach ($subdirs as $dir) {
+                        if (file_exists($dir . '/.env.example')) {
+                            $extractedSubdir = $dir;
+                            break;
                         }
-                        rmdir($laravelDir);
+                    }
+
+                    if ($extractedSubdir && is_dir($extractedSubdir)) {
+                        $files = array_diff(scandir($extractedSubdir), ['.', '..']);
+                        foreach ($files as $file) {
+                            rename("$extractedSubdir/$file", "$extractDir/$file");
+                        }
+                        rmdir($extractedSubdir);
                     }
 
                     header("Location: ?step=2");
