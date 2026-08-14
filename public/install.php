@@ -342,6 +342,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
         }
+    } elseif ($action === 'create_admin') {
+        $adminName = trim($_POST['admin_name'] ?? '');
+        $adminEmail = trim($_POST['admin_email'] ?? '');
+        $adminPassword = $_POST['admin_password'] ?? '';
+        $adminPasswordConfirm = $_POST['admin_password_confirm'] ?? '';
+
+        if (!$adminName || !$adminEmail || !$adminPassword) {
+            $error = "All fields are required.";
+        } elseif ($adminPassword !== $adminPasswordConfirm) {
+            $error = "Passwords do not match.";
+        } elseif (strlen($adminPassword) < 8) {
+            $error = "Password must be at least 8 characters long.";
+        } elseif (!filter_var($adminEmail, FILTER_VALIDATE_EMAIL)) {
+            $error = "Please enter a valid email address.";
+        } else {
+            // Bootstrap Laravel
+            if (file_exists(INSTALL_ROOT . '/vendor/autoload.php') && file_exists(INSTALL_ROOT . '/bootstrap/app.php')) {
+                require INSTALL_ROOT . '/vendor/autoload.php';
+                $app = require_once INSTALL_ROOT . '/bootstrap/app.php';
+                
+                try {
+                    $userClass = 'App\\Models\\User';
+                    if (class_exists($userClass)) {
+                        if ($userClass::where('email', $adminEmail)->exists()) {
+                            $error = "A user with this email address already exists.";
+                        } else {
+                            $userClass::create([
+                                'name' => $adminName,
+                                'email' => $adminEmail,
+                                'password' => \Illuminate\Support\Facades\Hash::make($adminPassword),
+                                'role' => 'admin',
+                                'is_active' => true,
+                            ]);
+                            
+                            header("Location: ?step=4");
+                            exit;
+                        }
+                    } else {
+                        $error = "Failed to load the User model.";
+                    }
+                } catch (\Exception $e) {
+                    $error = "Failed to create administrator: " . $e->getMessage();
+                }
+            } else {
+                $error = "Dependencies not found. Unable to create administrator.";
+            }
+        }
     }
 }
 ?>
@@ -447,8 +494,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </form>
 
         <?php elseif ($step == 3): ?>
+            <p>Database configured and migrated successfully! Now, create the first Administrator account.</p>
+            
+            <form method="POST">
+                <input type="hidden" name="action" value="create_admin">
+                
+                <div class="form-group">
+                    <label>Admin Name</label>
+                    <input type="text" name="admin_name" value="<?= htmlspecialchars($_POST['admin_name'] ?? '') ?>" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Admin Email</label>
+                    <input type="email" name="admin_email" value="<?= htmlspecialchars($_POST['admin_email'] ?? '') ?>" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" name="admin_password" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Confirm Password</label>
+                    <input type="password" name="admin_password_confirm" required>
+                </div>
+
+                <button type="submit" class="btn" style="width: 100%; margin-top: 1rem;">Create Account</button>
+            </form>
+
+        <?php elseif ($step == 4): ?>
             <h3 style="color: #4ade80;">Installation Complete! 🎉</h3>
-            <p>The application has been successfully configured and the database is ready.</p>
+            <p>The application has been successfully configured and the administrator account was created.</p>
             <p><strong>Note:</strong> For security reasons, please delete this <code>install.php</code> file from your server.</p>
             <a href="./" class="btn" style="width: 100%; text-align: center; box-sizing: border-box;">Go to Application</a>
         <?php endif; ?>
