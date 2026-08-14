@@ -96,6 +96,11 @@ class User extends Authenticatable
         return Structure::first();
     }
 
+    public function structures()
+    {
+        return Structure::query();
+    }
+
     public function hasRole(string|array $roles): bool
     {
         $roles = is_array($roles) ? $roles : func_get_args();

@@ -161,7 +161,7 @@
                         $navUser = auth()->user();
                         $structureLabel = 'Structures';
                         if($navUser->role === \App\Models\User::ROLE_ADMIN) {
-                            $structureCount = $navUser->structures()->count();
+                            $structureCount = \App\Models\Structure::count();
                             $structureLabel = $structureCount === 1 ? 'Structure' : 'Structures';
                         }
                     @endphp
