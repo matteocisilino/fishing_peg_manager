@@ -101,3 +101,6 @@ If you have SSH access and prefer setting it up manually:
 Currently, weight management in the application is handled using the metric decimal format. Support is being developed for the following formats:
 - **Traditional British format** (e.g., `12 lb 8 oz`)
 - **British decimal format** (e.g., `12.5 lb`)
+
+## 6) License
+This software is **Free Software**, free as in freedom ("free speech") and free as in price ("free beer"). It is released under the terms of the GNU Affero General Public License version 3 (AGPL-3.0). You are free to run, copy, distribute, study, change, and improve the software as long as you follow the AGPL-3.0 license terms.

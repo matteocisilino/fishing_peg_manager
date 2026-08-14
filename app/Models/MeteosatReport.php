@@ -25,12 +25,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Models\MeteosatJob;
 
 class MeteosatReport extends Model
 {
-    protected $connection = 'meteosat';
-
     protected $fillable = [
         'fishing_event_id',
         'tournament_id',
@@ -60,22 +57,5 @@ class MeteosatReport extends Model
     public function structure(): BelongsTo
     {
         return $this->belongsTo(Structure::class);
-    }
-
-    /**
-     * Override to ensure related models (stored sul DB principale) usano la connessione di default.
-     */
-    protected function newRelatedInstance($class)
-    {
-        $instance = new $class;
-
-        $defaultConnection = config('database.default');
-        if (in_array($class, [FishingEvent::class, Tournament::class, Structure::class, MeteosatJob::class], true)) {
-            $instance->setConnection($defaultConnection);
-        } else {
-            $instance->setConnection($this->getConnectionName());
-        }
-
-        return $instance;
     }
 }

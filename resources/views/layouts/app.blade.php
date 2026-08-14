@@ -284,6 +284,7 @@
     <p class="mb-0 small">
         {{ $releaseInfo['version_label'] }} {{ $releaseInfo['release'] }}
         <span class="d-block d-md-inline text-muted mt-1 mt-md-0">Last modified {{ $releaseInfo['timestamp'] }}</span>
+        <span class="d-block text-muted mt-1">Weather data provided by <a href="https://meteostat.net/" target="_blank" rel="noopener noreferrer" class="text-decoration-none fw-bold text-muted">Meteostat</a></span>
     </p>
 </footer>
 
