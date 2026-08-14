@@ -1,0 +1,38 @@
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.*
+!.env.example
+.phpunit.result.cache
+auth.json
+npm-debug.log
+yarn-error.log
+
+# Directories for Laravel storage
+/storage/app/
+/storage/framework/
+/storage/logs/
+/storage/tmp/
+
+# SQLite databases
+/database/*.sqlite
+/database/*.sqlite-journal
+
+# Project specific
+meteosat.json
+*.pdf
+
+# IDE and OS
+/.idea
+/.vscode
+/.fleet
+.DS_Store
+*.code-workspace
+
+# Android app sources
+/android
+/fishing_mobile_app/android
