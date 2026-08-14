@@ -45,6 +45,7 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
+    public const ROLE_SUPER_ADMIN = 'super_admin';
     public const ROLE_ADMIN = 'admin';
     public const ROLE_RILEVATORE = 'rilevatore';
 
@@ -104,7 +105,7 @@ class User extends Authenticatable
 
     public function isSuperAdmin(): bool
     {
-        return false;
+        return $this->role === self::ROLE_SUPER_ADMIN;
     }
 
     /**
