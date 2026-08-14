@@ -365,36 +365,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if (!$error) {
-                $check = checkRequirements();
-                if (!$check['No conflicting global PSR extension']) {
-                    $error = "PHP extension conflict: The global PHP extension 'psr' is enabled on your server and has an outdated/incompatible version of Psr\\Log\\LoggerInterface. This causes a Fatal Error with Laravel and Monolog. Please disable the 'psr' extension in your PHP settings (e.g. ISPConfig / cPanel) to continue.";
-                }
-            }
-
-            if (!$error) {
-                // Bootstrap Laravel to run migrations and key generate
-                if (file_exists(INSTALL_ROOT . '/vendor/autoload.php') && file_exists(INSTALL_ROOT . '/bootstrap/app.php')) {
-                    require INSTALL_ROOT . '/vendor/autoload.php';
-                    $app = require_once INSTALL_ROOT . '/bootstrap/app.php';
-                    $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
-                    
-                    try {
-                        // Discover packages programmatically in memory (bypasses proc_open limitations)
-                        $kernel->call('package:discover');
-                        
-                        $kernel->call('key:generate', ['--force' => true]);
-                        $kernel->call('migrate', ['--force' => true]);
-                        
-                        header("Location: ?step=3");
-                        exit;
-                    } catch (\Exception $e) {
-                        $error = "Configuration error: " . $e->getMessage();
-                    }
-                } else {
-                    $error = "Dependencies not found. Please ensure the 'vendor' directory exists.";
-                }
+                header("Location: ?step=2&do_migrate=1");
+                exit;
             }
         }
+    }
     } elseif ($action === 'create_admin') {
         $adminName = trim($_POST['admin_name'] ?? '');
         $adminEmail = trim($_POST['admin_email'] ?? '');
@@ -441,10 +416,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch (\Exception $e) {
                     $error = "Failed to create administrator: " . $e->getMessage();
                 }
-            } else {
-                $error = "Dependencies not found. Unable to create administrator.";
-            }
         }
+    }
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['do_migrate']) && $_GET['do_migrate'] === '1') {
+    if (file_exists(INSTALL_ROOT . '/vendor/autoload.php') && file_exists(INSTALL_ROOT . '/bootstrap/app.php')) {
+        require INSTALL_ROOT . '/vendor/autoload.php';
+        $app = require_once INSTALL_ROOT . '/bootstrap/app.php';
+        $kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+        
+        try {
+            $kernel->call('package:discover');
+            $kernel->call('key:generate', ['--force' => true]);
+            $kernel->call('migrate', ['--force' => true]);
+            
+            header("Location: ?step=3");
+            exit;
+        } catch (\Throwable $e) {
+            $error = "Configuration & Migration error: " . $e->getMessage();
+        }
+    } else {
+        $error = "Dependencies not found. Please ensure the 'vendor' directory exists.";
     }
 }
 ?>
