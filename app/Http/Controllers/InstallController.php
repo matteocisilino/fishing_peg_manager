@@ -64,7 +64,8 @@ class InstallController extends Controller
         // Test connessione DB
         try {
             if ($request->db_connection === 'sqlite') {
-                $dbPath = database_path($request->db_database);
+                $dbFilename = basename($request->db_database);
+                $dbPath = database_path($dbFilename);
                 if (!file_exists($dbPath)) {
                     touch($dbPath);
                 }
@@ -89,13 +90,13 @@ class InstallController extends Controller
         $envContent = file_get_contents($envExamplePath);
 
         // Aggiorna i valori
-        $appNameFormatted = '"' . $request->app_name . '"';
+        $appNameFormatted = '"' . str_replace('"', '', $request->app_name) . '"';
         $envContent = $this->updateEnv($envContent, 'APP_NAME', $appNameFormatted);
         $envContent = $this->updateEnv($envContent, 'APP_URL', $request->app_url);
         $envContent = $this->updateEnv($envContent, 'DB_CONNECTION', $request->db_connection);
         
         if ($request->db_connection === 'sqlite') {
-            $envContent = $this->updateEnv($envContent, 'DB_DATABASE', database_path($request->db_database));
+            $envContent = $this->updateEnv($envContent, 'DB_DATABASE', database_path(basename($request->db_database)));
             // Pulisce le variabili mysql
             $envContent = preg_replace("/^DB_HOST=.*/m", "# DB_HOST=127.0.0.1", $envContent);
             $envContent = preg_replace("/^DB_PORT=.*/m", "# DB_PORT=3306", $envContent);
@@ -131,10 +132,11 @@ class InstallController extends Controller
 
     private function updateEnv($envContent, $key, $value)
     {
+        $sanitizedValue = str_replace(["\r", "\n"], '', (string)$value);
         $pattern = "/^#?\s*{$key}=.*/m";
         if (preg_match($pattern, $envContent)) {
-            return preg_replace($pattern, "{$key}={$value}", $envContent);
+            return preg_replace($pattern, "{$key}={$sanitizedValue}", $envContent);
         }
-        return $envContent . "\n{$key}={$value}";
+        return $envContent . "\n{$key}={$sanitizedValue}";
     }
 }

@@ -21,16 +21,11 @@ class WeightService
             'zoneLocks',
         ]);
 
-        $lockedZones = $event->zoneLocks->keyBy('zone_key');
         $errors = [];
         $updatedZones = [];
 
         foreach ($zoneNames as $zoneName) {
             $zoneKey = $this->normalizeZoneKey($zoneName);
-            if ($lockedZones->has($zoneKey)) {
-                $errors[] = "Zone '{$zoneName}' is already confirmed and cannot be modified.";
-                continue;
-            }
 
             $zoneDraws = $event->draws->filter(function ($draw) use ($zoneKey) {
                 return $this->normalizeZoneKey($this->resolveZoneName($draw)) === $zoneKey;
@@ -44,7 +39,17 @@ class WeightService
             $zoneWeights = $weightsInput[$zoneName] ?? [];
 
             try {
-                DB::transaction(function () use ($event, $zoneDraws, $zoneWeights) {
+                $wasUpdated = DB::transaction(function () use ($event, $zoneName, $zoneKey, $zoneDraws, $zoneWeights, &$errors) {
+                    $isLocked = EventZoneLock::where('event_id', $event->id)
+                        ->where('zone_key', $zoneKey)
+                        ->lockForUpdate()
+                        ->exists();
+
+                    if ($isLocked) {
+                        $errors[] = "Zone '{$zoneName}' is already confirmed and cannot be modified.";
+                        return false;
+                    }
+
                     foreach ($zoneDraws as $draw) {
                         $anglerId = $draw->angler_id;
                         if ($anglerId === null) {
@@ -74,8 +79,13 @@ class WeightService
                             ]
                         );
                     }
+
+                    return true;
                 });
-                $updatedZones[] = $zoneName;
+
+                if ($wasUpdated) {
+                    $updatedZones[] = $zoneName;
+                }
             } catch (\Throwable $throwable) {
                 report($throwable);
                 $errors[] = "Error saving weights for zone '{$zoneName}'.";
@@ -102,51 +112,63 @@ class WeightService
 
         foreach ($zoneList as $zoneName) {
             $zoneKey = $this->normalizeZoneKey($zoneName);
-            $matchingDraws = $event->draws->filter(function ($draw) use ($zoneKey) {
-                return $this->normalizeZoneKey($this->resolveZoneName($draw)) === $zoneKey;
-            });
 
-            if ($matchingDraws->isEmpty()) {
-                $errors[] = "Zone '{$zoneName}' is not valid for this event.";
-                continue;
-            }
+            try {
+                $wasLocked = DB::transaction(function () use ($event, $zoneName, $zoneKey, $weightMap, &$errors) {
+                    $alreadyLocked = EventZoneLock::where('event_id', $event->id)
+                        ->where('zone_key', $zoneKey)
+                        ->lockForUpdate()
+                        ->exists();
 
-            $alreadyLocked = $event->zoneLocks->firstWhere('zone_key', $zoneKey);
-            if ($alreadyLocked) {
-                continue;
-            }
+                    if ($alreadyLocked) {
+                        return false;
+                    }
 
-            $zoneValid = true;
-            foreach ($matchingDraws as $draw) {
-                if ($draw->angler_id === null) {
-                    $errors[] = "Some pegs in zone '{$zoneName}' do not have an assigned participant.";
-                    $zoneValid = false;
-                    break;
+                    $matchingDraws = $event->draws->filter(function ($draw) use ($zoneKey) {
+                        return $this->normalizeZoneKey($this->resolveZoneName($draw)) === $zoneKey;
+                    });
+
+                    if ($matchingDraws->isEmpty()) {
+                        $errors[] = "Zone '{$zoneName}' is not valid for this event.";
+                        return false;
+                    }
+
+                    $zoneValid = true;
+                    foreach ($matchingDraws as $draw) {
+                        if ($draw->angler_id === null) {
+                            $errors[] = "Some pegs in zone '{$zoneName}' do not have an assigned participant.";
+                            $zoneValid = false;
+                            break;
+                        }
+                        $entry = $weightMap->get($draw->angler_id);
+                        if ($entry === null || $entry->weight_value === null) {
+                            $errors[] = "Complete all weights for zone '{$zoneName}' before confirming.";
+                            $zoneValid = false;
+                            break;
+                        }
+                    }
+
+                    if (!$zoneValid) {
+                        return false;
+                    }
+
+                    EventZoneLock::create([
+                        'event_id' => $event->id,
+                        'zone_key' => $zoneKey,
+                        'zone_name' => $zoneName,
+                        'locked_at' => now(),
+                    ]);
+
+                    return true;
+                });
+
+                if ($wasLocked) {
+                    $success[] = $zoneName;
                 }
-                $entry = $weightMap->get($draw->angler_id);
-                if ($entry === null || $entry->weight_value === null) {
-                    $errors[] = "Complete all weights for zone '{$zoneName}' before confirming.";
-                    $zoneValid = false;
-                    break;
-                }
+            } catch (\Throwable $throwable) {
+                report($throwable);
+                $errors[] = "Error locking zone '{$zoneName}'.";
             }
-
-            if (!$zoneValid) {
-                continue;
-            }
-
-            EventZoneLock::updateOrCreate(
-                [
-                    'event_id' => $event->id,
-                    'zone_key' => $zoneKey,
-                ],
-                [
-                    'zone_name' => $zoneName,
-                    'locked_at' => now(),
-                ]
-            );
-
-            $success[] = $zoneName;
         }
 
         if (!empty($success)) {
