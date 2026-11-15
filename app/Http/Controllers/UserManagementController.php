@@ -64,6 +64,7 @@ class UserManagementController extends Controller
 
     public function edit(Request $request, User $user): View
     {
+        $this->authorizeTarget($request, $user);
         return view('users.edit', [
             'user' => $user,
             'canManageAllFields' => true,
@@ -72,6 +73,7 @@ class UserManagementController extends Controller
 
     public function update(Request $request, User $user): RedirectResponse
     {
+        $this->authorizeTarget($request, $user);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
@@ -83,16 +85,35 @@ class UserManagementController extends Controller
 
         $data['is_active'] = $request->boolean('is_active', $user->is_active);
 
+        // Solo il super admin può cambiare ruolo e stato: un admin non deve potersi promuovere né promuovere altri.
+        if (!$request->user()->isSuperAdmin()) {
+            unset($data['role']);
+            $data['is_active'] = $user->is_active;
+        }
+
         if (!empty($data['password'])) {
             $user->password = $data['password'];
         } else {
             unset($data['password']);
         }
 
+        // Il ruolo di un super admin non si cambia da qui (il Rule::in non lo prevede).
+        if ($user->isSuperAdmin()) {
+            unset($data['role']);
+        }
+
         $user->fill($data);
         $user->save();
 
         return redirect()->route('users.index')->with('status', 'User updated successfully.');
+    }
+
+    private function authorizeTarget(Request $request, User $user): void
+    {
+        // Un admin non può modificare un super admin (cambio email/password = presa dell'account).
+        if ($user->isSuperAdmin() && !$request->user()->isSuperAdmin()) {
+            abort(403);
+        }
     }
 
     public function toggleStatus(User $user): RedirectResponse

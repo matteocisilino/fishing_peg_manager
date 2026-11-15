@@ -160,11 +160,11 @@
                     @if (!empty($oldTeamNames))
                         @foreach ($oldTeamNames as $tIndex => $teamName)
                             <script>
-                                window.__restore_team_{{ $tIndex }} = {!! json_encode([
+                                window.__restore_team_{{ (int) $tIndex }} = {!! \Illuminate\Support\Js::from([
                                     'team_name' => $teamName,
                                     'members' => $oldMemberNames[$tIndex] ?? [],
                                     'zones' => $oldMemberZones[$tIndex] ?? [],
-                                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) !!};
+                                ]) !!};
                             </script>
                         @endforeach
                     @endif

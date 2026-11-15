@@ -56,6 +56,10 @@ return [
         ],
     ],
 
+    'sync' => [
+        'key' => env('API_SYNC_KEY'),
+    ],
+
     'meteostat' => [
         'host' => env('METEOSTAT_API_HOST', 'meteostat.p.rapidapi.com'),
         'key' => env('METEOSTAT_API_KEY'),

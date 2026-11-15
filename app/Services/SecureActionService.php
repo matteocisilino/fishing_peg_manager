@@ -28,6 +28,7 @@ use App\Models\SecureActionToken;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
 
 class SecureActionService
@@ -82,6 +83,13 @@ class SecureActionService
 
     public function validate(User $user, string $action, string $code): SecureActionToken
     {
+        $limiterKey = "secure-action:{$user->id}";
+        if (RateLimiter::tooManyAttempts($limiterKey, 5)) {
+            throw ValidationException::withMessages([
+                'otp_code' => 'Too many attempts. Please wait and request a new OTP.',
+            ]);
+        }
+
         $actionToken = SecureActionToken::where('user_id', $user->id)
             ->where('action', $action)
             ->latest('id')
@@ -96,6 +104,8 @@ class SecureActionService
         if ($globalToken && $this->isTokenValid($globalToken, $code, false)) {
             return $globalToken;
         }
+
+        RateLimiter::hit($limiterKey, 600);
 
         throw ValidationException::withMessages([
             'otp_code' => 'Invalid or expired OTP. Please request a new one.',

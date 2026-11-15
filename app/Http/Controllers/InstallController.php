@@ -50,6 +50,15 @@ class InstallController extends Controller
 
     public function process(Request $request)
     {
+        // Già installata: rifiuta, altrimenti chiunque potrebbe riscrivere il .env.
+        try {
+            if (file_exists(base_path('.env')) && DB::connection()->getPdo() && Schema::hasTable('users')) {
+                abort(404);
+            }
+        } catch (\PDOException|\Illuminate\Database\QueryException) {
+            // DB non raggiungibile: installazione ancora da completare.
+        }
+
         $request->validate([
             'app_name' => 'required|string|max:255',
             'app_url' => 'required|url',
@@ -76,7 +85,7 @@ class InstallController extends Controller
             }
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
         } catch (\PDOException $e) {
-            return back()->withInput()->with('error', 'Database connection failed: ' . $e->getMessage());
+            return back()->withInput()->with('error', 'Database connection failed. Check the credentials and try again.');
         }
 
         // Genera .env
@@ -93,6 +102,9 @@ class InstallController extends Controller
         $appNameFormatted = '"' . str_replace('"', '', $request->app_name) . '"';
         $envContent = $this->updateEnv($envContent, 'APP_NAME', $appNameFormatted);
         $envContent = $this->updateEnv($envContent, 'APP_URL', $request->app_url);
+        $envContent = $this->updateEnv($envContent, 'APP_ENV', 'production');
+        $envContent = $this->updateEnv($envContent, 'APP_DEBUG', 'false');
+        $envContent = $this->updateEnv($envContent, 'API_SYNC_KEY', bin2hex(random_bytes(24)));
         $envContent = $this->updateEnv($envContent, 'DB_CONNECTION', $request->db_connection);
         
         if ($request->db_connection === 'sqlite') {

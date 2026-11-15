@@ -71,9 +71,9 @@ class SyncController extends Controller
     public function syncAllUp(Request $request): JsonResponse
     {
         // Simple API Key check
-        $apiKey = $request->input('api_key');
-        $expectedKey = env('API_SYNC_KEY', 'default-secret');
-        if ($apiKey !== $expectedKey) {
+        $apiKey = (string) $request->input('api_key');
+        $expectedKey = (string) config('services.sync.key');
+        if ($expectedKey === '' || !hash_equals($expectedKey, $apiKey)) {
             return response()->json(['error' => 'Invalid API Key. Check settings.'], 401);
         }
 

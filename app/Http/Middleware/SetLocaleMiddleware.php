@@ -19,7 +19,7 @@ class SetLocaleMiddleware
     {
         $locale = Session::get('locale', config('app.locale', 'en_GB'));
 
-        if ($locale && (file_exists(base_path("lang/{$locale}.json")) || is_dir(base_path("lang/{$locale}")))) {
+        if ($locale && preg_match('/^[A-Za-z_]{2,10}$/', $locale) && (file_exists(base_path("lang/{$locale}.json")) || is_dir(base_path("lang/{$locale}")))) {
             App::setLocale($locale);
         }
 

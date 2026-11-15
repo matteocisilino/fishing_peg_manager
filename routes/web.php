@@ -39,23 +39,23 @@ use App\Models\User;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/login', [LoginController::class, 'show'])->name('login');
-Route::post('/login', [LoginController::class, 'login'])->name('login.attempt');
+Route::post('/login', [LoginController::class, 'login'])->middleware('throttle:10,1')->name('login.attempt');
 Route::get('/password/reset', [ForgotPasswordController::class, 'showLinkRequestForm'])->name('password.request');
-Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->name('password.email');
+Route::post('/password/email', [ForgotPasswordController::class, 'sendResetLinkEmail'])->middleware('throttle:5,1')->name('password.email');
 Route::get('/password/reset/{token}', [ResetPasswordController::class, 'showResetForm'])->name('password.reset');
-Route::post('/password/reset', [ResetPasswordController::class, 'reset'])->name('password.update');
+Route::post('/password/reset', [ResetPasswordController::class, 'reset'])->middleware('throttle:5,1')->name('password.update');
 Route::get('/otp', [\App\Http\Controllers\OtpController::class, 'show'])->name('otp.show');
-Route::post('/otp', [\App\Http\Controllers\OtpController::class, 'verify'])->name('otp.verify');
+Route::post('/otp', [\App\Http\Controllers\OtpController::class, 'verify'])->middleware('throttle:10,1')->name('otp.verify');
 
 Route::get('/install', [InstallController::class, 'show'])->name('install.show');
-Route::post('/install', [InstallController::class, 'process'])->name('install.process');
+Route::post('/install', [InstallController::class, 'process'])->middleware('throttle:10,1')->name('install.process');
 
 Route::get('/lang/{locale}', function (string $locale) {
     if (file_exists(base_path("lang/{$locale}.json")) || is_dir(base_path("lang/{$locale}"))) {
         session(['locale' => $locale]);
     }
     return back();
-})->name('lang.switch');
+})->where('locale', '[A-Za-z_]{2,10}')->name('lang.switch');
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');

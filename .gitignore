@@ -38,3 +38,13 @@ meteosat.json
 /fishing_mobile_app/android
 
 torneo_pesca_laravel.code-workspace
+
+# Claude: registro sessioni locale
+/.claude/sessions/
+
+# Graphify e istruzioni Claude (locali)
+/graphify-out/
+CLAUDE.md
+STATO.md
+.claude/settings.json
+.claude/hooks/session.sh

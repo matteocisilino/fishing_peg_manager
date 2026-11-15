@@ -29,6 +29,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\View\View;
 
 class OtpController extends Controller
@@ -66,10 +67,18 @@ class OtpController extends Controller
             return redirect()->route('login')->withErrors(['general' => 'OTP expired or invalid.']);
         }
 
+        // Il codice ha 10^6 combinazioni: dopo 5 errori si invalida e si riparte dal login.
+        $limiterKey = 'otp:' . $user->id;
         if (!Hash::check($request->input('code'), $user->otp_code)) {
+            if (RateLimiter::hit($limiterKey, 600) >= 5) {
+                $user->update(['otp_code' => null, 'otp_expires_at' => null]);
+                $request->session()->forget(['otp_user_id', 'otp_remember']);
+                return redirect()->route('login')->withErrors(['general' => 'Too many invalid OTP attempts. Log in again.']);
+            }
             return back()->withErrors(['code' => 'Invalid OTP code.']);
         }
 
+        RateLimiter::clear($limiterKey);
         $user->update([
             'otp_code' => null,
             'otp_expires_at' => null,

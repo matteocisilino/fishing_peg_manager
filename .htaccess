@@ -16,7 +16,8 @@
     RewriteEngine On
 
     # Block access to private directories
-    RewriteRule ^(storage|bootstrap|app|config|database|resources|routes|tests|vendor)(/|$) - [F,L]
+    RewriteRule ^(storage|bootstrap|app|config|database|resources|routes|tests|vendor|lang|supervisor\.d|node_modules)(/|$) - [F,L]
+    RewriteRule ^(artisan|composer\.(json|lock)|package(-lock)?\.json|phpunit\.xml|vite\.config\.js|check_updates\.php|peg-manager-initialization\.sh|README\.md|CLAUDE\.md|STATO\.md|.*\.code-workspace)$ - [F,L]
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
